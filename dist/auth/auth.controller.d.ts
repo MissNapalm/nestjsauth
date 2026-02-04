@@ -1,5 +1,5 @@
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, Verify2FADto, RefreshTokenDto, RequestPasswordResetDto, ResetPasswordDto } from './auth.dto';
+import { RegisterDto, LoginDto, Verify2FADto, RefreshTokenDto, RequestPasswordResetDto, ResetPasswordDto, VerifyEmailDto, ResendVerificationDto } from './auth.dto';
 export declare class AuthController {
     private authService;
     constructor(authService: AuthService);
@@ -7,6 +7,19 @@ export declare class AuthController {
     register(body: RegisterDto, req: any): Promise<{
         message: string;
         userId: string;
+        requiresVerification: boolean;
+        testToken: string;
+    }>;
+    verifyEmail(body: VerifyEmailDto, req: any): Promise<{
+        message: string;
+        email: string;
+    }>;
+    resendVerification(body: ResendVerificationDto, req: any): Promise<{
+        message: string;
+        testToken?: undefined;
+    } | {
+        message: string;
+        testToken: string;
     }>;
     login(body: LoginDto, req: any): Promise<{
         message: string;

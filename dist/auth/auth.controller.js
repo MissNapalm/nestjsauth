@@ -35,6 +35,14 @@ let AuthController = class AuthController {
         const { ipAddress, userAgent } = this.getClientInfo(req);
         return this.authService.register(body.email, body.password, ipAddress, userAgent);
     }
+    async verifyEmail(body, req) {
+        const { ipAddress, userAgent } = this.getClientInfo(req);
+        return this.authService.verifyEmail(body.token, ipAddress, userAgent);
+    }
+    async resendVerification(body, req) {
+        const { ipAddress, userAgent } = this.getClientInfo(req);
+        return this.authService.resendVerificationEmail(body.email, ipAddress, userAgent);
+    }
     async login(body, req) {
         const { ipAddress, userAgent } = this.getClientInfo(req);
         return this.authService.login(body.email, body.password, ipAddress, userAgent);
@@ -78,6 +86,26 @@ __decorate([
     __metadata("design:paramtypes", [auth_dto_1.RegisterDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "register", null);
+__decorate([
+    (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
+    ,
+    (0, common_1.Post)('verify-email'),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [auth_dto_1.VerifyEmailDto, Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "verifyEmail", null);
+__decorate([
+    (0, throttler_1.Throttle)({ default: { limit: 3, ttl: 60000 } }) // 3 requests per minute (strict)
+    ,
+    (0, common_1.Post)('resend-verification'),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [auth_dto_1.ResendVerificationDto, Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "resendVerification", null);
 __decorate([
     (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
     ,

@@ -9,6 +9,20 @@ export declare class AuthService {
     register(email: string, password: string, ipAddress: string, userAgent: string): Promise<{
         message: string;
         userId: string;
+        requiresVerification: boolean;
+        testToken: string;
+    }>;
+    private generateSecureToken;
+    verifyEmail(token: string, ipAddress: string, userAgent: string): Promise<{
+        message: string;
+        email: string;
+    }>;
+    resendVerificationEmail(email: string, ipAddress: string, userAgent: string): Promise<{
+        message: string;
+        testToken?: undefined;
+    } | {
+        message: string;
+        testToken: string;
     }>;
     login(email: string, password: string, ipAddress: string, userAgent: string): Promise<{
         message: string;

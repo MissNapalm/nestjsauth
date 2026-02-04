@@ -20,4 +20,10 @@ export declare class ResetPasswordDto {
     token: string;
     password: string;
 }
+export declare class VerifyEmailDto {
+    token: string;
+}
+export declare class ResendVerificationDto {
+    email: string;
+}
 //# sourceMappingURL=auth.dto.d.ts.map

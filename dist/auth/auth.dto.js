@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ResetPasswordDto = exports.RequestPasswordResetDto = exports.RefreshTokenDto = exports.Verify2FADto = exports.LoginDto = exports.RegisterDto = void 0;
+exports.ResendVerificationDto = exports.VerifyEmailDto = exports.ResetPasswordDto = exports.RequestPasswordResetDto = exports.RefreshTokenDto = exports.Verify2FADto = exports.LoginDto = exports.RegisterDto = void 0;
 const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
 class RegisterDto {
@@ -80,4 +80,19 @@ __decorate([
     (0, class_validator_1.MaxLength)(128, { message: 'Password must not exceed 128 characters' }),
     __metadata("design:type", String)
 ], ResetPasswordDto.prototype, "password", void 0);
+class VerifyEmailDto {
+}
+exports.VerifyEmailDto = VerifyEmailDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], VerifyEmailDto.prototype, "token", void 0);
+class ResendVerificationDto {
+}
+exports.ResendVerificationDto = ResendVerificationDto;
+__decorate([
+    (0, class_transformer_1.Transform)(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value)),
+    (0, class_validator_1.IsEmail)({}, { message: 'Invalid email format' }),
+    __metadata("design:type", String)
+], ResendVerificationDto.prototype, "email", void 0);
 //# sourceMappingURL=auth.dto.js.map

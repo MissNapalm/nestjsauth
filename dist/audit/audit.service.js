@@ -17,6 +17,11 @@ var AuditEventType;
     AuditEventType["LOGIN_SUCCESS"] = "LOGIN_SUCCESS";
     AuditEventType["LOGIN_FAILED"] = "LOGIN_FAILED";
     AuditEventType["LOGOUT"] = "LOGOUT";
+    // Email verification events
+    AuditEventType["EMAIL_VERIFICATION_SENT"] = "EMAIL_VERIFICATION_SENT";
+    AuditEventType["EMAIL_VERIFICATION_SUCCESS"] = "EMAIL_VERIFICATION_SUCCESS";
+    AuditEventType["EMAIL_VERIFICATION_FAILED"] = "EMAIL_VERIFICATION_FAILED";
+    AuditEventType["EMAIL_VERIFICATION_RESENT"] = "EMAIL_VERIFICATION_RESENT";
     // 2FA events
     AuditEventType["TWO_FA_SENT"] = "2FA_SENT";
     AuditEventType["TWO_FA_SUCCESS"] = "2FA_SUCCESS";

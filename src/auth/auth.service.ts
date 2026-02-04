@@ -8,7 +8,8 @@ import { AuditService, AuditEventType } from '../audit/audit.service';
 const users = new Map<string, any>();
 const twoFactorCodes = new Map<string, { code: string; expiresAt: number }>();
 const refreshTokens = new Map<string, { token: string; expiresAt: number }>();
-const passwordResetTokens = new Map<string, { email: string; expiresAt: number }>(); 
+const passwordResetTokens = new Map<string, { email: string; expiresAt: number }>();
+const emailVerificationTokens = new Map<string, { email: string; expiresAt: number }>();
 
 @Injectable()
 export class AuthService {
@@ -37,7 +38,36 @@ export class AuthService {
       id: userId,
       email,
       password: hashedPassword,
+      emailVerified: false,
+      createdAt: new Date(),
     });
+
+    // Generate email verification token
+    const verificationToken = this.generateSecureToken();
+    emailVerificationTokens.set(verificationToken, {
+      email,
+      expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+    });
+
+    // Send verification email
+    const verificationLink = `http://localhost:3000?verify=${verificationToken}`;
+    try {
+      await this.emailService.sendEmail({
+        to: [email],
+        subject: 'Verify Your Email Address',
+        html: `
+          <h2>Welcome! Please verify your email</h2>
+          <p>Click the link below to verify your email address:</p>
+          <p><a href="${verificationLink}" style="background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Verify Email</a></p>
+          <p>Or copy this link: ${verificationLink}</p>
+          <p>This link expires in 24 hours.</p>
+          <p><strong>Test Token:</strong> ${verificationToken}</p>
+        `,
+        text: `Verify your email: ${verificationLink}\nTest Token: ${verificationToken}`,
+      });
+    } catch (err) {
+      console.error('⚠️ Email service error:', err.message);
+    }
 
     this.auditService.log(AuditEventType.REGISTER_SUCCESS, {
       userId,
@@ -47,7 +77,136 @@ export class AuthService {
       success: true,
     });
 
-    return { message: 'Registration successful', userId };
+    this.auditService.log(AuditEventType.EMAIL_VERIFICATION_SENT, {
+      userId,
+      email,
+      ipAddress,
+      userAgent,
+      success: true,
+    });
+
+    return { 
+      message: 'Registration successful. Please check your email to verify your account.',
+      userId,
+      requiresVerification: true,
+      testToken: verificationToken, // Remove in production
+    };
+  }
+
+  private generateSecureToken(): string {
+    return Array.from({ length: 32 }, () => 
+      Math.random().toString(36).charAt(2)
+    ).join('');
+  }
+
+  async verifyEmail(token: string, ipAddress: string, userAgent: string) {
+    const tokenData = emailVerificationTokens.get(token);
+
+    if (!tokenData) {
+      this.auditService.log(AuditEventType.EMAIL_VERIFICATION_FAILED, {
+        ipAddress,
+        userAgent,
+        success: false,
+        details: { reason: 'Invalid verification token' },
+      });
+      throw new BadRequestException('Invalid or expired verification link');
+    }
+
+    if (Date.now() > tokenData.expiresAt) {
+      emailVerificationTokens.delete(token);
+      this.auditService.log(AuditEventType.EMAIL_VERIFICATION_FAILED, {
+        email: tokenData.email,
+        ipAddress,
+        userAgent,
+        success: false,
+        details: { reason: 'Token expired' },
+      });
+      throw new BadRequestException('Verification link has expired. Please request a new one.');
+    }
+
+    const user = users.get(tokenData.email);
+    if (!user) {
+      emailVerificationTokens.delete(token);
+      throw new BadRequestException('User not found');
+    }
+
+    // Mark email as verified
+    user.emailVerified = true;
+    users.set(tokenData.email, user);
+    emailVerificationTokens.delete(token);
+
+    this.auditService.log(AuditEventType.EMAIL_VERIFICATION_SUCCESS, {
+      userId: user.id,
+      email: tokenData.email,
+      ipAddress,
+      userAgent,
+      success: true,
+    });
+
+    return { 
+      message: 'Email verified successfully! You can now log in.',
+      email: tokenData.email,
+    };
+  }
+
+  async resendVerificationEmail(email: string, ipAddress: string, userAgent: string) {
+    const user = users.get(email);
+
+    // Always return success to prevent email enumeration
+    if (!user) {
+      return { message: 'If the email exists, a verification link will be sent.' };
+    }
+
+    if (user.emailVerified) {
+      return { message: 'Email is already verified. You can log in.' };
+    }
+
+    // Delete any existing tokens for this email
+    for (const [token, data] of emailVerificationTokens.entries()) {
+      if (data.email === email) {
+        emailVerificationTokens.delete(token);
+      }
+    }
+
+    // Generate new verification token
+    const verificationToken = this.generateSecureToken();
+    emailVerificationTokens.set(verificationToken, {
+      email,
+      expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+    });
+
+    // Send verification email
+    const verificationLink = `http://localhost:3000?verify=${verificationToken}`;
+    try {
+      await this.emailService.sendEmail({
+        to: [email],
+        subject: 'Verify Your Email Address',
+        html: `
+          <h2>Email Verification</h2>
+          <p>Click the link below to verify your email address:</p>
+          <p><a href="${verificationLink}" style="background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Verify Email</a></p>
+          <p>Or copy this link: ${verificationLink}</p>
+          <p>This link expires in 24 hours.</p>
+          <p><strong>Test Token:</strong> ${verificationToken}</p>
+        `,
+        text: `Verify your email: ${verificationLink}\nTest Token: ${verificationToken}`,
+      });
+    } catch (err) {
+      console.error('⚠️ Email service error:', err.message);
+    }
+
+    this.auditService.log(AuditEventType.EMAIL_VERIFICATION_RESENT, {
+      userId: user.id,
+      email,
+      ipAddress,
+      userAgent,
+      success: true,
+    });
+
+    return { 
+      message: 'Verification email sent. Please check your inbox.',
+      testToken: verificationToken, // Remove in production
+    };
   }
 
   async login(email: string, password: string, ipAddress: string, userAgent: string) {
@@ -83,6 +242,19 @@ export class AuthService {
         details: { reason: 'Invalid password' },
       });
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // Check if email is verified
+    if (!user.emailVerified) {
+      this.auditService.log(AuditEventType.LOGIN_FAILED, {
+        email,
+        userId: user.id,
+        ipAddress,
+        userAgent,
+        success: false,
+        details: { reason: 'Email not verified' },
+      });
+      throw new UnauthorizedException('Please verify your email before logging in. Check your inbox or request a new verification link.');
     }
 
     // Generate 2FA code

@@ -2,7 +2,7 @@ import { Controller, Post, Get, Body, UseGuards, Request, Req } from '@nestjs/co
 import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, Verify2FADto, RefreshTokenDto, RequestPasswordResetDto, ResetPasswordDto } from './auth.dto';
+import { RegisterDto, LoginDto, Verify2FADto, RefreshTokenDto, RequestPasswordResetDto, ResetPasswordDto, VerifyEmailDto, ResendVerificationDto } from './auth.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -23,6 +23,20 @@ export class AuthController {
   async register(@Body() body: RegisterDto, @Req() req: any) {
     const { ipAddress, userAgent } = this.getClientInfo(req);
     return this.authService.register(body.email, body.password, ipAddress, userAgent);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
+  @Post('verify-email')
+  async verifyEmail(@Body() body: VerifyEmailDto, @Req() req: any) {
+    const { ipAddress, userAgent } = this.getClientInfo(req);
+    return this.authService.verifyEmail(body.token, ipAddress, userAgent);
+  }
+
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 requests per minute (strict)
+  @Post('resend-verification')
+  async resendVerification(@Body() body: ResendVerificationDto, @Req() req: any) {
+    const { ipAddress, userAgent } = this.getClientInfo(req);
+    return this.authService.resendVerificationEmail(body.email, ipAddress, userAgent);
   }
 
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute

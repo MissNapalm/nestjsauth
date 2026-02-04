@@ -52,3 +52,14 @@ export class ResetPasswordDto {
   @MaxLength(128, { message: 'Password must not exceed 128 characters' })
   password: string;
 }
+
+export class VerifyEmailDto {
+  @IsString()
+  token: string;
+}
+
+export class ResendVerificationDto {
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @IsEmail({}, { message: 'Invalid email format' })
+  email: string;
+}
