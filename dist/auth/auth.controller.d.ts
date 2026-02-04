@@ -1,26 +1,18 @@
 import { AuthService } from './auth.service';
+import { RegisterDto, LoginDto, Verify2FADto } from './auth.dto';
 export declare class AuthController {
     private authService;
     constructor(authService: AuthService);
-    register(body: {
-        email: string;
-        password: string;
-    }): Promise<{
+    register(body: RegisterDto): Promise<{
         message: string;
         userId: string;
     }>;
-    login(body: {
-        email: string;
-        password: string;
-    }): Promise<{
+    login(body: LoginDto): Promise<{
         message: string;
         email: string;
         testCode: string;
     }>;
-    verify2FA(body: {
-        email: string;
-        code: string;
-    }): Promise<{
+    verify2FA(body: Verify2FADto): Promise<{
         access_token: string;
         user: {
             id: any;

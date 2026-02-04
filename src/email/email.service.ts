@@ -8,6 +8,15 @@ interface SendEmailDto {
   text?: string;
 }
 
+// Simple HTML sanitization function
+function sanitizeHtml(html: string): string {
+  return html
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 @Injectable()
 export class EmailService {
   private transporter: any;
@@ -27,10 +36,23 @@ export class EmailService {
 
   async sendEmail(data: SendEmailDto): Promise<any> {
     try {
+      // Validate email addresses
+      if (!Array.isArray(data.to) || data.to.length === 0) {
+        throw new Error('Invalid recipient email(s)');
+      }
+
+      // Sanitize inputs
+      const sanitizedTo = data.to.map(email => {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          throw new Error(`Invalid email format: ${email}`);
+        }
+        return email.toLowerCase().trim();
+      });
+
       const result = await this.transporter.sendMail({
         from: process.env.SENDER_EMAIL,
-        to: data.to,
-        subject: data.subject,
+        to: sanitizedTo,
+        subject: data.subject.substring(0, 200), // Limit subject length
         html: data.html,
         text: data.text,
       });
