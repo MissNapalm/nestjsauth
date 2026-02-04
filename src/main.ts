@@ -8,6 +8,26 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import * as express from 'express';
 import * as path from 'path';
+import { PrismaClient } from '@prisma/client';
+
+// Database reset function
+async function resetDatabase() {
+  const prisma = new PrismaClient();
+  try {
+    console.log('🗑️  Resetting database...');
+    // Delete in order to respect foreign key constraints
+    await prisma.auditLog.deleteMany();
+    await prisma.refreshToken.deleteMany();
+    await prisma.verificationToken.deleteMany();
+    await prisma.twoFactorCode.deleteMany();
+    await prisma.user.deleteMany();
+    console.log('✅ Database reset complete');
+  } catch (error) {
+    console.error('❌ Database reset failed:', error.message);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -54,7 +74,21 @@ async function bootstrap() {
   const publicPath = path.join(__dirname, '..', 'public');
   app.use(express.static(publicPath));
 
+  // Handle graceful shutdown and reset database
+  const gracefulShutdown = async (signal: string) => {
+    console.log(`\n📡 Received ${signal}. Shutting down gracefully...`);
+    await app.close();
+    await resetDatabase();
+    process.exit(0);
+  };
+
+  // Listen for termination signals
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));   // Ctrl+C
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM')); // kill command
+  process.on('SIGHUP', () => gracefulShutdown('SIGHUP'));   // terminal closed
+
   await app.listen(3000);
   console.log(`🚀 Server running on http://localhost:3000`);
+  console.log(`⚠️  Database will be reset when server stops`);
 }
 bootstrap();
