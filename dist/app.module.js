@@ -10,6 +10,7 @@ exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const passport_1 = require("@nestjs/passport");
+const throttler_1 = require("@nestjs/throttler");
 const app_controller_1 = require("./app.controller");
 const auth_controller_1 = require("./auth/auth.controller");
 const auth_service_1 = require("./auth/auth.service");
@@ -26,6 +27,13 @@ exports.AppModule = AppModule = __decorate([
                 secret: process.env.JWT_SECRET || 'super-secret-key',
                 signOptions: { expiresIn: '1h' },
             }),
+            // Rate limiting: 10 requests per 15 minutes
+            throttler_1.ThrottlerModule.forRoot([
+                {
+                    ttl: 900000, // 15 minutes in milliseconds
+                    limit: 10, // 10 requests per ttl
+                },
+            ]),
         ],
         controllers: [app_controller_1.AppController, auth_controller_1.AuthController],
         providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy, email_service_1.EmailService],

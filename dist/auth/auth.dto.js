@@ -22,11 +22,8 @@ __decorate([
 ], RegisterDto.prototype, "email", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MinLength)(8, { message: 'Password must be at least 8 characters' }),
+    (0, class_validator_1.MinLength)(6, { message: 'Password must be at least 6 characters' }),
     (0, class_validator_1.MaxLength)(128, { message: 'Password must not exceed 128 characters' }),
-    (0, class_validator_1.Matches)(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, {
-        message: 'Password must contain uppercase, lowercase, and number',
-    }),
     __metadata("design:type", String)
 ], RegisterDto.prototype, "password", void 0);
 class LoginDto {
@@ -39,7 +36,7 @@ __decorate([
 ], LoginDto.prototype, "email", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MinLength)(8, { message: 'Password must be at least 8 characters' }),
+    (0, class_validator_1.MinLength)(6, { message: 'Password must be at least 6 characters' }),
     __metadata("design:type", String)
 ], LoginDto.prototype, "password", void 0);
 class Verify2FADto {

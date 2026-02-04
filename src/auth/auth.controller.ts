@@ -1,5 +1,6 @@
 import { Controller, Post, Get, Body, UseGuards, Request, ValidationPipe } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto, Verify2FADto } from './auth.dto';
 
@@ -7,16 +8,19 @@ import { RegisterDto, LoginDto, Verify2FADto } from './auth.dto';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   @Post('register')
   async register(@Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })) body: RegisterDto) {
     return this.authService.register(body.email, body.password);
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   @Post('login')
   async login(@Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })) body: LoginDto) {
     return this.authService.login(body.email, body.password);
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   @Post('verify-2fa')
   async verify2FA(@Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })) body: Verify2FADto) {
     return this.authService.verify2FA(body.email, body.code);
