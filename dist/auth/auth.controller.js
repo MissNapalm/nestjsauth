@@ -31,6 +31,17 @@ let AuthController = class AuthController {
     async verify2FA(body) {
         return this.authService.verify2FA(body.email, body.code);
     }
+    async refreshToken(body, req) {
+        // Get userId from the JWT payload in Authorization header
+        // For now, we'll extract it from the refresh token itself
+        try {
+            const decoded = JSON.parse(Buffer.from(body.refresh_token.split('.')[1], 'base64').toString());
+            return this.authService.refreshAccessToken(decoded.sub, body.refresh_token);
+        }
+        catch (err) {
+            throw new Error('Invalid refresh token format');
+        }
+    }
     async getProfile(req) {
         return this.authService.getProfile(req.user.userId);
     }
@@ -63,6 +74,16 @@ __decorate([
     __metadata("design:paramtypes", [auth_dto_1.Verify2FADto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "verify2FA", null);
+__decorate([
+    (0, throttler_1.Throttle)({ default: { limit: 10, ttl: 60000 } }) // 10 requests per minute (more lenient for refresh)
+    ,
+    (0, common_1.Post)('refresh'),
+    __param(0, (0, common_1.Body)(new common_1.ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [auth_dto_1.RefreshTokenDto, Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "refreshToken", null);
 __decorate([
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
     (0, common_1.Get)('profile'),

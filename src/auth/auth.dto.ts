@@ -31,3 +31,8 @@ export class Verify2FADto {
   @Matches(/^\d{6}$/, { message: '2FA code must be exactly 6 digits' })
   code: string;
 }
+
+export class RefreshTokenDto {
+  @IsString()
+  refresh_token: string;
+}

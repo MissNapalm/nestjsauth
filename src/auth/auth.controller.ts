@@ -2,7 +2,7 @@ import { Controller, Post, Get, Body, UseGuards, Request, ValidationPipe } from 
 import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, Verify2FADto } from './auth.dto';
+import { RegisterDto, LoginDto, Verify2FADto, RefreshTokenDto } from './auth.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -24,6 +24,19 @@ export class AuthController {
   @Post('verify-2fa')
   async verify2FA(@Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })) body: Verify2FADto) {
     return this.authService.verify2FA(body.email, body.code);
+  }
+
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 requests per minute (more lenient for refresh)
+  @Post('refresh')
+  async refreshToken(@Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })) body: RefreshTokenDto, @Request() req) {
+    // Get userId from the JWT payload in Authorization header
+    // For now, we'll extract it from the refresh token itself
+    try {
+      const decoded = JSON.parse(Buffer.from(body.refresh_token.split('.')[1], 'base64').toString());
+      return this.authService.refreshAccessToken(decoded.sub, body.refresh_token);
+    } catch (err) {
+      throw new Error('Invalid refresh token format');
+    }
   }
 
   @UseGuards(AuthGuard('jwt'))

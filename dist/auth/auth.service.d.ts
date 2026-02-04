@@ -15,6 +15,7 @@ export declare class AuthService {
     }>;
     verify2FA(email: string, code: string): Promise<{
         access_token: string;
+        refresh_token: string;
         user: {
             id: any;
             email: any;
@@ -23,6 +24,10 @@ export declare class AuthService {
     getProfile(userId: string): Promise<{
         id: any;
         email: any;
+    }>;
+    refreshAccessToken(userId: string, refreshToken: string): Promise<{
+        access_token: string;
+        refresh_token: string;
     }>;
 }
 //# sourceMappingURL=auth.service.d.ts.map

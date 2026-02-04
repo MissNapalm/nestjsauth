@@ -1,5 +1,5 @@
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, Verify2FADto } from './auth.dto';
+import { RegisterDto, LoginDto, Verify2FADto, RefreshTokenDto } from './auth.dto';
 export declare class AuthController {
     private authService;
     constructor(authService: AuthService);
@@ -14,10 +14,15 @@ export declare class AuthController {
     }>;
     verify2FA(body: Verify2FADto): Promise<{
         access_token: string;
+        refresh_token: string;
         user: {
             id: any;
             email: any;
         };
+    }>;
+    refreshToken(body: RefreshTokenDto, req: any): Promise<{
+        access_token: string;
+        refresh_token: string;
     }>;
     getProfile(req: any): Promise<{
         id: any;
