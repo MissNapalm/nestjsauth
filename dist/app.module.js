@@ -21,7 +21,12 @@ const audit_service_1 = require("./audit/audit.service");
 const audit_controller_1 = require("./audit/audit.controller");
 const prisma_module_1 = require("./prisma/prisma.module");
 const custom_throttler_guard_1 = require("./guards/custom-throttler.guard");
+const request_id_middleware_1 = require("./middleware/request-id.middleware");
 let AppModule = class AppModule {
+    configure(consumer) {
+        // Apply request ID middleware to all routes
+        consumer.apply(request_id_middleware_1.RequestIdMiddleware).forRoutes('*');
+    }
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([

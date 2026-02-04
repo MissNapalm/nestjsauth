@@ -46,6 +46,7 @@ export interface AuditLog {
   email?: string;
   ipAddress: string;
   userAgent: string;
+  requestId?: string;
   success: boolean;
   details?: Record<string, any>;
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
@@ -63,6 +64,7 @@ export class AuditService {
       email?: string;
       ipAddress: string;
       userAgent: string;
+      requestId?: string;
       success: boolean;
       details?: Record<string, any>;
     },
@@ -77,6 +79,7 @@ export class AuditService {
       email: data.email,
       ipAddress: data.ipAddress,
       userAgent: data.userAgent,
+      requestId: data.requestId,
       success: data.success,
       details: data.details,
       riskLevel,
@@ -87,8 +90,9 @@ export class AuditService {
     // Console output for demo (use proper logging service in production)
     const emoji = data.success ? '✅' : '❌';
     const riskEmoji = riskLevel === 'critical' ? '🚨' : riskLevel === 'high' ? '⚠️' : '';
+    const reqId = data.requestId ? `[${data.requestId.slice(0, 8)}]` : '';
     console.log(
-      `${emoji} ${riskEmoji} [AUDIT] ${eventType} | ${data.email || 'unknown'} | ${data.ipAddress} | ${data.success ? 'SUCCESS' : 'FAILED'}`,
+      `${emoji} ${riskEmoji} ${reqId} [AUDIT] ${eventType} | ${data.email || 'unknown'} | ${data.ipAddress} | ${data.success ? 'SUCCESS' : 'FAILED'}`,
     );
 
     // Alert on high-risk events

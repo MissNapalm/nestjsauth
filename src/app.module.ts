@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
@@ -12,6 +12,7 @@ import { AuditService } from './audit/audit.service';
 import { AuditController } from './audit/audit.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { CustomThrottlerGuard } from './guards/custom-throttler.guard';
+import { RequestIdMiddleware } from './middleware/request-id.middleware';
 
 @Module({
   imports: [
@@ -54,4 +55,9 @@ import { CustomThrottlerGuard } from './guards/custom-throttler.guard';
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    // Apply request ID middleware to all routes
+    consumer.apply(RequestIdMiddleware).forRoutes('*');
+  }
+}

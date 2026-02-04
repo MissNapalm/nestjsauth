@@ -36,7 +36,7 @@ export class AuthService {
     await new Promise(resolve => setTimeout(resolve, delay));
   }
 
-  async register(email: string, password: string, ipAddress: string, userAgent: string) {
+  async register(email: string, password: string, ipAddress: string, userAgent: string, requestId?: string) {
     // Check if user exists
     const existingUser = await this.prisma.user.findUnique({ where: { email } });
     
@@ -45,6 +45,7 @@ export class AuthService {
         email,
         ipAddress,
         userAgent,
+        requestId,
         success: false,
         details: { reason: 'User already exists' },
       });
@@ -117,7 +118,7 @@ export class AuthService {
     };
   }
 
-  async verifyEmail(token: string, ipAddress: string, userAgent: string) {
+  async verifyEmail(token: string, ipAddress: string, userAgent: string, requestId?: string) {
     const tokenData = await this.prisma.verificationToken.findUnique({
       where: { token },
     });
@@ -126,6 +127,7 @@ export class AuthService {
       this.auditService.log(AuditEventType.EMAIL_VERIFICATION_FAILED, {
         ipAddress,
         userAgent,
+        requestId,
         success: false,
         details: { reason: 'Invalid verification token' },
       });
@@ -167,7 +169,7 @@ export class AuthService {
     };
   }
 
-  async resendVerificationEmail(email: string, ipAddress: string, userAgent: string) {
+  async resendVerificationEmail(email: string, ipAddress: string, userAgent: string, requestId?: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
 
     // Always return success to prevent email enumeration
@@ -234,7 +236,7 @@ export class AuthService {
   private readonly LOCKOUT_DURATION_MINUTES = 15;
   private readonly MAX_2FA_ATTEMPTS = 5;
 
-  async login(email: string, password: string, ipAddress: string, userAgent: string) {
+  async login(email: string, password: string, ipAddress: string, userAgent: string, requestId?: string) {
     // Add random delay to prevent timing-based user enumeration
     await this.addSecurityDelay();
     
@@ -244,6 +246,7 @@ export class AuthService {
       email,
       ipAddress,
       userAgent,
+      requestId,
       success: true,
       details: { userExists: !!user },
     });
@@ -256,6 +259,7 @@ export class AuthService {
         email,
         ipAddress,
         userAgent,
+        requestId,
         success: false,
         details: { reason: 'User not found' },
       });
@@ -394,7 +398,7 @@ export class AuthService {
     return { message: '2FA code sent to email (check spam folder)', email, testCode: code };
   }
 
-  async verify2FA(email: string, code: string, ipAddress: string, userAgent: string) {
+  async verify2FA(email: string, code: string, ipAddress: string, userAgent: string, requestId?: string) {
     const storedCode = await this.prisma.twoFactorCode.findUnique({ where: { email } });
     const user = await this.prisma.user.findUnique({ where: { email } });
 
@@ -403,6 +407,7 @@ export class AuthService {
         email,
         ipAddress,
         userAgent,
+        requestId,
         success: false,
         details: { reason: 'No 2FA code found' },
       });
@@ -506,7 +511,7 @@ export class AuthService {
     return user;
   }
 
-  async refreshAccessToken(userId: string, refreshToken: string, ipAddress: string, userAgent: string) {
+  async refreshAccessToken(userId: string, refreshToken: string, ipAddress: string, userAgent: string, requestId?: string) {
     const storedToken = await this.prisma.refreshToken.findUnique({
       where: { token: refreshToken },
     });
@@ -516,6 +521,7 @@ export class AuthService {
         userId,
         ipAddress,
         userAgent,
+        requestId,
         success: false,
         details: { reason: 'Invalid refresh token' },
       });
@@ -553,7 +559,7 @@ export class AuthService {
     return { access_token: accessToken };
   }
 
-  async requestPasswordReset(email: string, ipAddress: string, userAgent: string) {
+  async requestPasswordReset(email: string, ipAddress: string, userAgent: string, requestId?: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
 
     // Always return success to prevent email enumeration
@@ -562,6 +568,7 @@ export class AuthService {
       userId: user?.id,
       ipAddress,
       userAgent,
+      requestId,
       success: true,
     });
 
@@ -611,7 +618,7 @@ export class AuthService {
     };
   }
 
-  async resetPassword(token: string, newPassword: string, ipAddress: string, userAgent: string) {
+  async resetPassword(token: string, newPassword: string, ipAddress: string, userAgent: string, requestId?: string) {
     const tokenData = await this.prisma.verificationToken.findUnique({
       where: { token },
     });
@@ -620,6 +627,7 @@ export class AuthService {
       this.auditService.log(AuditEventType.PASSWORD_RESET_FAILED, {
         ipAddress,
         userAgent,
+        requestId,
         success: false,
         details: { reason: 'Invalid reset token' },
       });

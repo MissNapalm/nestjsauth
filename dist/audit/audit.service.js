@@ -56,6 +56,7 @@ let AuditService = class AuditService {
             email: data.email,
             ipAddress: data.ipAddress,
             userAgent: data.userAgent,
+            requestId: data.requestId,
             success: data.success,
             details: data.details,
             riskLevel,
@@ -64,7 +65,8 @@ let AuditService = class AuditService {
         // Console output for demo (use proper logging service in production)
         const emoji = data.success ? '✅' : '❌';
         const riskEmoji = riskLevel === 'critical' ? '🚨' : riskLevel === 'high' ? '⚠️' : '';
-        console.log(`${emoji} ${riskEmoji} [AUDIT] ${eventType} | ${data.email || 'unknown'} | ${data.ipAddress} | ${data.success ? 'SUCCESS' : 'FAILED'}`);
+        const reqId = data.requestId ? `[${data.requestId.slice(0, 8)}]` : '';
+        console.log(`${emoji} ${riskEmoji} ${reqId} [AUDIT] ${eventType} | ${data.email || 'unknown'} | ${data.ipAddress} | ${data.success ? 'SUCCESS' : 'FAILED'}`);
         // Alert on high-risk events
         if (riskLevel === 'critical' || riskLevel === 'high') {
             this.alertSecurityTeam(log);

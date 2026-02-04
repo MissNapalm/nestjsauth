@@ -32,6 +32,7 @@ export interface AuditLog {
     email?: string;
     ipAddress: string;
     userAgent: string;
+    requestId?: string;
     success: boolean;
     details?: Record<string, any>;
     riskLevel: 'low' | 'medium' | 'high' | 'critical';
@@ -43,6 +44,7 @@ export declare class AuditService {
         email?: string;
         ipAddress: string;
         userAgent: string;
+        requestId?: string;
         success: boolean;
         details?: Record<string, any>;
     }): AuditLog;

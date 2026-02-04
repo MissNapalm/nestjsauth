@@ -29,47 +29,48 @@ let AuthController = class AuthController {
             req.ip ||
             'unknown';
         const userAgent = req.headers['user-agent'] || 'unknown';
-        return { ipAddress, userAgent };
+        const requestId = req.requestId || req.headers['x-request-id'] || 'unknown';
+        return { ipAddress, userAgent, requestId };
     }
     async register(body, req) {
-        const { ipAddress, userAgent } = this.getClientInfo(req);
-        return this.authService.register(body.email, body.password, ipAddress, userAgent);
+        const { ipAddress, userAgent, requestId } = this.getClientInfo(req);
+        return this.authService.register(body.email, body.password, ipAddress, userAgent, requestId);
     }
     async verifyEmail(body, req) {
-        const { ipAddress, userAgent } = this.getClientInfo(req);
-        return this.authService.verifyEmail(body.token, ipAddress, userAgent);
+        const { ipAddress, userAgent, requestId } = this.getClientInfo(req);
+        return this.authService.verifyEmail(body.token, ipAddress, userAgent, requestId);
     }
     async resendVerification(body, req) {
-        const { ipAddress, userAgent } = this.getClientInfo(req);
-        return this.authService.resendVerificationEmail(body.email, ipAddress, userAgent);
+        const { ipAddress, userAgent, requestId } = this.getClientInfo(req);
+        return this.authService.resendVerificationEmail(body.email, ipAddress, userAgent, requestId);
     }
     async login(body, req) {
-        const { ipAddress, userAgent } = this.getClientInfo(req);
-        return this.authService.login(body.email, body.password, ipAddress, userAgent);
+        const { ipAddress, userAgent, requestId } = this.getClientInfo(req);
+        return this.authService.login(body.email, body.password, ipAddress, userAgent, requestId);
     }
     async verify2FA(body, req) {
-        const { ipAddress, userAgent } = this.getClientInfo(req);
-        return this.authService.verify2FA(body.email, body.code, ipAddress, userAgent);
+        const { ipAddress, userAgent, requestId } = this.getClientInfo(req);
+        return this.authService.verify2FA(body.email, body.code, ipAddress, userAgent, requestId);
     }
     async refreshToken(body, req) {
-        const { ipAddress, userAgent } = this.getClientInfo(req);
+        const { ipAddress, userAgent, requestId } = this.getClientInfo(req);
         // Get userId from the JWT payload in Authorization header
         // For now, we'll extract it from the refresh token itself
         try {
             const decoded = JSON.parse(Buffer.from(body.refresh_token.split('.')[1], 'base64').toString());
-            return this.authService.refreshAccessToken(decoded.sub, body.refresh_token, ipAddress, userAgent);
+            return this.authService.refreshAccessToken(decoded.sub, body.refresh_token, ipAddress, userAgent, requestId);
         }
         catch (err) {
             throw new Error('Invalid refresh token format');
         }
     }
     async requestPasswordReset(body, req) {
-        const { ipAddress, userAgent } = this.getClientInfo(req);
-        return this.authService.requestPasswordReset(body.email, ipAddress, userAgent);
+        const { ipAddress, userAgent, requestId } = this.getClientInfo(req);
+        return this.authService.requestPasswordReset(body.email, ipAddress, userAgent, requestId);
     }
     async resetPassword(body, req) {
-        const { ipAddress, userAgent } = this.getClientInfo(req);
-        return this.authService.resetPassword(body.token, body.password, ipAddress, userAgent);
+        const { ipAddress, userAgent, requestId } = this.getClientInfo(req);
+        return this.authService.resetPassword(body.token, body.password, ipAddress, userAgent, requestId);
     }
     async getProfile(req) {
         return this.authService.getProfile(req.user.userId);
