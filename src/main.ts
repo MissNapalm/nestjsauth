@@ -1,11 +1,12 @@
+import * as dotenv from 'dotenv';
+
+// Load environment variables from .env FIRST
+dotenv.config();
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as express from 'express';
 import * as path from 'path';
-import * as dotenv from 'dotenv';
-
-// Load environment variables from .env
-dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);

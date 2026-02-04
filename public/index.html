@@ -195,9 +195,9 @@
       <p class="subtitle">Login & 2FA with Email</p>
 
       <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('login')">Login</button>
-        <button class="tab-btn" onclick="switchTab('register')">Register</button>
-        <button class="tab-btn" onclick="switchTab('profile')">Profile</button>
+        <button class="tab-btn active" onclick="switchTab('login', event)">Login</button>
+        <button class="tab-btn" onclick="switchTab('register', event)">Register</button>
+        <button class="tab-btn" onclick="switchTab('profile', event)">Profile</button>
       </div>
 
       <!-- Login Tab -->
@@ -267,14 +267,18 @@
     const API_URL = 'http://localhost:3000/auth';
     let token = localStorage.getItem('token');
 
-    function switchTab(tab) {
+    function switchTab(tab, evt) {
       // Hide all tabs
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
 
       // Show selected tab
       document.getElementById(tab).classList.add('active');
-      event.target.classList.add('active');
+      
+      // Only set active class on button if event was triggered by button click
+      if (evt && evt.target) {
+        evt.target.classList.add('active');
+      }
 
       if (tab === 'profile' && token) {
         loadProfile();
@@ -405,10 +409,14 @@
         return;
       }
 
+      console.log('Loading profile with token:', token ? token.substring(0, 20) + '...' : 'NO TOKEN');
+
       try {
         const response = await fetch(`${API_URL}/profile`, {
           headers: { 'Authorization': `Bearer ${token}` },
         });
+
+        console.log('Profile response status:', response.status);
 
         if (response.ok) {
           const data = await response.json();
@@ -416,9 +424,12 @@
           document.getElementById('profileEmail').textContent = data.email;
           document.getElementById('profileContent').style.display = 'block';
         } else {
+          const errorData = await response.json();
+          console.error('Profile error:', errorData);
           showMessage('profileMessage', 'Failed to load profile', true);
         }
       } catch (error) {
+        console.error('Profile fetch error:', error);
         showMessage('profileMessage', 'Network error', true);
       }
     }
