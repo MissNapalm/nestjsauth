@@ -11,6 +11,7 @@ const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const passport_1 = require("@nestjs/passport");
 const throttler_1 = require("@nestjs/throttler");
+const core_1 = require("@nestjs/core");
 const app_controller_1 = require("./app.controller");
 const auth_controller_1 = require("./auth/auth.controller");
 const auth_service_1 = require("./auth/auth.service");
@@ -19,6 +20,7 @@ const email_service_1 = require("./email/email.service");
 const audit_service_1 = require("./audit/audit.service");
 const audit_controller_1 = require("./audit/audit.controller");
 const prisma_module_1 = require("./prisma/prisma.module");
+const custom_throttler_guard_1 = require("./guards/custom-throttler.guard");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -28,19 +30,41 @@ exports.AppModule = AppModule = __decorate([
             prisma_module_1.PrismaModule,
             passport_1.PassportModule,
             jwt_1.JwtModule.register({
-                secret: process.env.JWT_SECRET || 'super-secret-key',
+                secret: process.env.JWT_SECRET,
                 signOptions: { expiresIn: '1h' },
             }),
-            // Rate limiting: 10 requests per 15 minutes
+            // Rate limiting configuration
+            // Multiple throttlers for different time windows
             throttler_1.ThrottlerModule.forRoot([
                 {
-                    ttl: 900000, // 15 minutes in milliseconds
-                    limit: 10, // 10 requests per ttl
+                    name: 'short',
+                    ttl: 1000, // 1 second
+                    limit: 3, // 3 requests per second (burst protection)
+                },
+                {
+                    name: 'medium',
+                    ttl: 60000, // 1 minute
+                    limit: 20, // 20 requests per minute
+                },
+                {
+                    name: 'long',
+                    ttl: 900000, // 15 minutes
+                    limit: 100, // 100 requests per 15 minutes
                 },
             ]),
         ],
         controllers: [app_controller_1.AppController, auth_controller_1.AuthController, audit_controller_1.AuditController],
-        providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy, email_service_1.EmailService, audit_service_1.AuditService],
+        providers: [
+            auth_service_1.AuthService,
+            jwt_strategy_1.JwtStrategy,
+            email_service_1.EmailService,
+            audit_service_1.AuditService,
+            // Apply custom throttler guard globally
+            {
+                provide: core_1.APP_GUARD,
+                useClass: custom_throttler_guard_1.CustomThrottlerGuard,
+            },
+        ],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map
