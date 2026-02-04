@@ -1,19 +1,21 @@
 import { JwtService } from '@nestjs/jwt';
 import { EmailService } from '../email/email.service';
+import { AuditService } from '../audit/audit.service';
 export declare class AuthService {
     private jwtService;
     private emailService;
-    constructor(jwtService: JwtService, emailService: EmailService);
-    register(email: string, password: string): Promise<{
+    private auditService;
+    constructor(jwtService: JwtService, emailService: EmailService, auditService: AuditService);
+    register(email: string, password: string, ipAddress: string, userAgent: string): Promise<{
         message: string;
         userId: string;
     }>;
-    login(email: string, password: string): Promise<{
+    login(email: string, password: string, ipAddress: string, userAgent: string): Promise<{
         message: string;
         email: string;
         testCode: string;
     }>;
-    verify2FA(email: string, code: string): Promise<{
+    verify2FA(email: string, code: string, ipAddress: string, userAgent: string): Promise<{
         access_token: string;
         refresh_token: string;
         user: {
@@ -25,14 +27,14 @@ export declare class AuthService {
         id: any;
         email: any;
     }>;
-    refreshAccessToken(userId: string, refreshToken: string): Promise<{
+    refreshAccessToken(userId: string, refreshToken: string, ipAddress: string, userAgent: string): Promise<{
         access_token: string;
         refresh_token: string;
     }>;
-    requestPasswordReset(email: string): Promise<{
+    requestPasswordReset(email: string, ipAddress: string, userAgent: string): Promise<{
         message: string;
     }>;
-    resetPassword(token: string, newPassword: string): Promise<{
+    resetPassword(token: string, newPassword: string, ipAddress: string, userAgent: string): Promise<{
         message: string;
     }>;
 }

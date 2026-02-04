@@ -47,18 +47,27 @@ const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const bcrypt = __importStar(require("bcryptjs"));
 const email_service_1 = require("../email/email.service");
+const audit_service_1 = require("../audit/audit.service");
 // In-memory storage (replace with database in production)
 const users = new Map();
 const twoFactorCodes = new Map();
 const refreshTokens = new Map();
 const passwordResetTokens = new Map();
 let AuthService = class AuthService {
-    constructor(jwtService, emailService) {
+    constructor(jwtService, emailService, auditService) {
         this.jwtService = jwtService;
         this.emailService = emailService;
+        this.auditService = auditService;
     }
-    async register(email, password) {
+    async register(email, password, ipAddress, userAgent) {
         if (users.has(email)) {
+            this.auditService.log(audit_service_1.AuditEventType.REGISTER_FAILED, {
+                email,
+                ipAddress,
+                userAgent,
+                success: false,
+                details: { reason: 'User already exists' },
+            });
             throw new common_1.BadRequestException('User already exists');
         }
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -68,15 +77,44 @@ let AuthService = class AuthService {
             email,
             password: hashedPassword,
         });
+        this.auditService.log(audit_service_1.AuditEventType.REGISTER_SUCCESS, {
+            userId,
+            email,
+            ipAddress,
+            userAgent,
+            success: true,
+        });
         return { message: 'Registration successful', userId };
     }
-    async login(email, password) {
+    async login(email, password, ipAddress, userAgent) {
         const user = users.get(email);
+        this.auditService.log(audit_service_1.AuditEventType.LOGIN_ATTEMPT, {
+            email,
+            ipAddress,
+            userAgent,
+            success: true,
+            details: { userExists: !!user },
+        });
         if (!user) {
+            this.auditService.log(audit_service_1.AuditEventType.LOGIN_FAILED, {
+                email,
+                ipAddress,
+                userAgent,
+                success: false,
+                details: { reason: 'User not found' },
+            });
             throw new common_1.UnauthorizedException('Invalid credentials');
         }
         const passwordMatch = await bcrypt.compare(password, user.password);
         if (!passwordMatch) {
+            this.auditService.log(audit_service_1.AuditEventType.LOGIN_FAILED, {
+                email,
+                userId: user.id,
+                ipAddress,
+                userAgent,
+                success: false,
+                details: { reason: 'Invalid password' },
+            });
             throw new common_1.UnauthorizedException('Invalid credentials');
         }
         // Generate 2FA code
@@ -99,13 +137,27 @@ let AuthService = class AuthService {
         }
         catch (err) {
             console.error('⚠️ Email service error:', err.message);
-            // Don't throw - allow login to proceed with 2FA code even if email fails
         }
+        this.auditService.log(audit_service_1.AuditEventType.TWO_FA_SENT, {
+            email,
+            userId: user.id,
+            ipAddress,
+            userAgent,
+            success: true,
+        });
         return { message: '2FA code sent to email (check spam folder)', email, testCode: code };
     }
-    async verify2FA(email, code) {
+    async verify2FA(email, code, ipAddress, userAgent) {
         const storedCode = twoFactorCodes.get(email);
+        const user = users.get(email);
         if (!storedCode) {
+            this.auditService.log(audit_service_1.AuditEventType.TWO_FA_FAILED, {
+                email,
+                ipAddress,
+                userAgent,
+                success: false,
+                details: { reason: 'No 2FA code found' },
+            });
             throw new common_1.BadRequestException('No 2FA code found');
         }
         if (Date.now() > storedCode.expiresAt) {
@@ -113,10 +165,24 @@ let AuthService = class AuthService {
             throw new common_1.BadRequestException('2FA code expired');
         }
         if (storedCode.code !== code) {
+            this.auditService.log(audit_service_1.AuditEventType.TWO_FA_FAILED, {
+                email,
+                userId: user?.id,
+                ipAddress,
+                userAgent,
+                success: false,
+                details: { reason: 'Invalid 2FA code' },
+            });
             throw new common_1.BadRequestException('Invalid 2FA code');
         }
         twoFactorCodes.delete(email);
-        const user = users.get(email);
+        this.auditService.log(audit_service_1.AuditEventType.TWO_FA_SUCCESS, {
+            email,
+            userId: user.id,
+            ipAddress,
+            userAgent,
+            success: true,
+        });
         // Generate access token (short-lived: 15 minutes)
         const accessToken = this.jwtService.sign({
             sub: user.id,
@@ -148,14 +214,28 @@ let AuthService = class AuthService {
         }
         throw new common_1.UnauthorizedException('User not found');
     }
-    async refreshAccessToken(userId, refreshToken) {
+    async refreshAccessToken(userId, refreshToken, ipAddress, userAgent) {
         const tokenKey = `${userId}_${refreshToken}`;
         const storedToken = refreshTokens.get(tokenKey);
         if (!storedToken) {
+            this.auditService.log(audit_service_1.AuditEventType.TOKEN_REFRESH_FAILED, {
+                userId,
+                ipAddress,
+                userAgent,
+                success: false,
+                details: { reason: 'Invalid refresh token' },
+            });
             throw new common_1.UnauthorizedException('Invalid refresh token');
         }
         if (Date.now() > storedToken.expiresAt) {
             refreshTokens.delete(tokenKey);
+            this.auditService.log(audit_service_1.AuditEventType.TOKEN_REFRESH_FAILED, {
+                userId,
+                ipAddress,
+                userAgent,
+                success: false,
+                details: { reason: 'Refresh token expired' },
+            });
             throw new common_1.UnauthorizedException('Refresh token expired');
         }
         const user = users.get([...users.values()].find(u => u.id === userId)?.email);
@@ -181,13 +261,28 @@ let AuthService = class AuthService {
             token: newRefreshToken,
             expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
         });
+        this.auditService.log(audit_service_1.AuditEventType.TOKEN_REFRESH, {
+            userId: user.id,
+            email: user.email,
+            ipAddress,
+            userAgent,
+            success: true,
+        });
         return {
             access_token: newAccessToken,
             refresh_token: newRefreshToken,
         };
     }
-    async requestPasswordReset(email) {
+    async requestPasswordReset(email, ipAddress, userAgent) {
         const user = users.get(email);
+        this.auditService.log(audit_service_1.AuditEventType.PASSWORD_RESET_REQUESTED, {
+            email,
+            userId: user?.id,
+            ipAddress,
+            userAgent,
+            success: true,
+            details: { userExists: !!user },
+        });
         if (!user) {
             // Don't reveal if email exists (security best practice)
             return { message: 'If email exists, password reset link will be sent' };
@@ -229,13 +324,26 @@ let AuthService = class AuthService {
         }
         return { message: 'If email exists, password reset link will be sent' };
     }
-    async resetPassword(token, newPassword) {
+    async resetPassword(token, newPassword, ipAddress, userAgent) {
         const resetTokenData = passwordResetTokens.get(token);
         if (!resetTokenData) {
+            this.auditService.log(audit_service_1.AuditEventType.PASSWORD_RESET_FAILED, {
+                ipAddress,
+                userAgent,
+                success: false,
+                details: { reason: 'Invalid or expired reset token' },
+            });
             throw new common_1.BadRequestException('Invalid or expired reset token');
         }
         if (Date.now() > resetTokenData.expiresAt) {
             passwordResetTokens.delete(token);
+            this.auditService.log(audit_service_1.AuditEventType.PASSWORD_RESET_FAILED, {
+                email: resetTokenData.email,
+                ipAddress,
+                userAgent,
+                success: false,
+                details: { reason: 'Reset token expired' },
+            });
             throw new common_1.BadRequestException('Reset token expired');
         }
         const user = users.get(resetTokenData.email);
@@ -253,6 +361,13 @@ let AuthService = class AuthService {
         tokensToDelete.forEach(key => passwordResetTokens.delete(key));
         // Delete the used reset token
         passwordResetTokens.delete(token);
+        this.auditService.log(audit_service_1.AuditEventType.PASSWORD_RESET_SUCCESS, {
+            email: resetTokenData.email,
+            userId: user.id,
+            ipAddress,
+            userAgent,
+            success: true,
+        });
         return { message: 'Password reset successful. Please login with your new password.' };
     }
 };
@@ -260,6 +375,7 @@ exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [jwt_1.JwtService,
-        email_service_1.EmailService])
+        email_service_1.EmailService,
+        audit_service_1.AuditService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

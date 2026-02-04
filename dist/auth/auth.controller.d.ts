@@ -3,16 +3,17 @@ import { RegisterDto, LoginDto, Verify2FADto, RefreshTokenDto, RequestPasswordRe
 export declare class AuthController {
     private authService;
     constructor(authService: AuthService);
-    register(body: RegisterDto): Promise<{
+    private getClientInfo;
+    register(body: RegisterDto, req: any): Promise<{
         message: string;
         userId: string;
     }>;
-    login(body: LoginDto): Promise<{
+    login(body: LoginDto, req: any): Promise<{
         message: string;
         email: string;
         testCode: string;
     }>;
-    verify2FA(body: Verify2FADto): Promise<{
+    verify2FA(body: Verify2FADto, req: any): Promise<{
         access_token: string;
         refresh_token: string;
         user: {
@@ -24,10 +25,10 @@ export declare class AuthController {
         access_token: string;
         refresh_token: string;
     }>;
-    requestPasswordReset(body: RequestPasswordResetDto): Promise<{
+    requestPasswordReset(body: RequestPasswordResetDto, req: any): Promise<{
         message: string;
     }>;
-    resetPassword(body: ResetPasswordDto): Promise<{
+    resetPassword(body: ResetPasswordDto, req: any): Promise<{
         message: string;
     }>;
     getProfile(req: any): Promise<{

@@ -22,31 +22,46 @@ let AuthController = class AuthController {
     constructor(authService) {
         this.authService = authService;
     }
-    async register(body) {
-        return this.authService.register(body.email, body.password);
+    // Helper to extract client info for audit logging
+    getClientInfo(req) {
+        const ipAddress = req.headers['x-forwarded-for']?.split(',')[0] ||
+            req.connection?.remoteAddress ||
+            req.ip ||
+            'unknown';
+        const userAgent = req.headers['user-agent'] || 'unknown';
+        return { ipAddress, userAgent };
     }
-    async login(body) {
-        return this.authService.login(body.email, body.password);
+    async register(body, req) {
+        const { ipAddress, userAgent } = this.getClientInfo(req);
+        return this.authService.register(body.email, body.password, ipAddress, userAgent);
     }
-    async verify2FA(body) {
-        return this.authService.verify2FA(body.email, body.code);
+    async login(body, req) {
+        const { ipAddress, userAgent } = this.getClientInfo(req);
+        return this.authService.login(body.email, body.password, ipAddress, userAgent);
+    }
+    async verify2FA(body, req) {
+        const { ipAddress, userAgent } = this.getClientInfo(req);
+        return this.authService.verify2FA(body.email, body.code, ipAddress, userAgent);
     }
     async refreshToken(body, req) {
+        const { ipAddress, userAgent } = this.getClientInfo(req);
         // Get userId from the JWT payload in Authorization header
         // For now, we'll extract it from the refresh token itself
         try {
             const decoded = JSON.parse(Buffer.from(body.refresh_token.split('.')[1], 'base64').toString());
-            return this.authService.refreshAccessToken(decoded.sub, body.refresh_token);
+            return this.authService.refreshAccessToken(decoded.sub, body.refresh_token, ipAddress, userAgent);
         }
         catch (err) {
             throw new Error('Invalid refresh token format');
         }
     }
-    async requestPasswordReset(body) {
-        return this.authService.requestPasswordReset(body.email);
+    async requestPasswordReset(body, req) {
+        const { ipAddress, userAgent } = this.getClientInfo(req);
+        return this.authService.requestPasswordReset(body.email, ipAddress, userAgent);
     }
-    async resetPassword(body) {
-        return this.authService.resetPassword(body.token, body.password);
+    async resetPassword(body, req) {
+        const { ipAddress, userAgent } = this.getClientInfo(req);
+        return this.authService.resetPassword(body.token, body.password, ipAddress, userAgent);
     }
     async getProfile(req) {
         return this.authService.getProfile(req.user.userId);
@@ -58,8 +73,9 @@ __decorate([
     ,
     (0, common_1.Post)('register'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [auth_dto_1.RegisterDto]),
+    __metadata("design:paramtypes", [auth_dto_1.RegisterDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "register", null);
 __decorate([
@@ -67,8 +83,9 @@ __decorate([
     ,
     (0, common_1.Post)('login'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [auth_dto_1.LoginDto]),
+    __metadata("design:paramtypes", [auth_dto_1.LoginDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "login", null);
 __decorate([
@@ -76,8 +93,9 @@ __decorate([
     ,
     (0, common_1.Post)('verify-2fa'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [auth_dto_1.Verify2FADto]),
+    __metadata("design:paramtypes", [auth_dto_1.Verify2FADto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "verify2FA", null);
 __decorate([
@@ -85,7 +103,7 @@ __decorate([
     ,
     (0, common_1.Post)('refresh'),
     __param(0, (0, common_1.Body)()),
-    __param(1, (0, common_1.Request)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [auth_dto_1.RefreshTokenDto, Object]),
     __metadata("design:returntype", Promise)
@@ -95,8 +113,9 @@ __decorate([
     ,
     (0, common_1.Post)('request-password-reset'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [auth_dto_1.RequestPasswordResetDto]),
+    __metadata("design:paramtypes", [auth_dto_1.RequestPasswordResetDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "requestPasswordReset", null);
 __decorate([
@@ -104,8 +123,9 @@ __decorate([
     ,
     (0, common_1.Post)('reset-password'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [auth_dto_1.ResetPasswordDto]),
+    __metadata("design:paramtypes", [auth_dto_1.ResetPasswordDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "resetPassword", null);
 __decorate([

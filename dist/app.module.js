@@ -16,6 +16,8 @@ const auth_controller_1 = require("./auth/auth.controller");
 const auth_service_1 = require("./auth/auth.service");
 const jwt_strategy_1 = require("./auth/jwt.strategy");
 const email_service_1 = require("./email/email.service");
+const audit_service_1 = require("./audit/audit.service");
+const audit_controller_1 = require("./audit/audit.controller");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -35,8 +37,8 @@ exports.AppModule = AppModule = __decorate([
                 },
             ]),
         ],
-        controllers: [app_controller_1.AppController, auth_controller_1.AuthController],
-        providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy, email_service_1.EmailService],
+        controllers: [app_controller_1.AppController, auth_controller_1.AuthController, audit_controller_1.AuditController],
+        providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy, email_service_1.EmailService, audit_service_1.AuditService],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

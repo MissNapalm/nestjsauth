@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { EmailService } from '../email/email.service';
+import { AuditService, AuditEventType } from '../audit/audit.service';
 
 // In-memory storage (replace with database in production)
 const users = new Map<string, any>();
@@ -14,10 +15,18 @@ export class AuthService {
   constructor(
     private jwtService: JwtService,
     private emailService: EmailService,
+    private auditService: AuditService,
   ) {}
 
-  async register(email: string, password: string) {
+  async register(email: string, password: string, ipAddress: string, userAgent: string) {
     if (users.has(email)) {
+      this.auditService.log(AuditEventType.REGISTER_FAILED, {
+        email,
+        ipAddress,
+        userAgent,
+        success: false,
+        details: { reason: 'User already exists' },
+      });
       throw new BadRequestException('User already exists');
     }
 
@@ -30,18 +39,49 @@ export class AuthService {
       password: hashedPassword,
     });
 
+    this.auditService.log(AuditEventType.REGISTER_SUCCESS, {
+      userId,
+      email,
+      ipAddress,
+      userAgent,
+      success: true,
+    });
+
     return { message: 'Registration successful', userId };
   }
 
-  async login(email: string, password: string) {
+  async login(email: string, password: string, ipAddress: string, userAgent: string) {
     const user = users.get(email);
 
+    this.auditService.log(AuditEventType.LOGIN_ATTEMPT, {
+      email,
+      ipAddress,
+      userAgent,
+      success: true,
+      details: { userExists: !!user },
+    });
+
     if (!user) {
+      this.auditService.log(AuditEventType.LOGIN_FAILED, {
+        email,
+        ipAddress,
+        userAgent,
+        success: false,
+        details: { reason: 'User not found' },
+      });
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
+      this.auditService.log(AuditEventType.LOGIN_FAILED, {
+        email,
+        userId: user.id,
+        ipAddress,
+        userAgent,
+        success: false,
+        details: { reason: 'Invalid password' },
+      });
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -66,16 +106,31 @@ export class AuthService {
       }
     } catch (err) {
       console.error('⚠️ Email service error:', err.message);
-      // Don't throw - allow login to proceed with 2FA code even if email fails
     }
+
+    this.auditService.log(AuditEventType.TWO_FA_SENT, {
+      email,
+      userId: user.id,
+      ipAddress,
+      userAgent,
+      success: true,
+    });
 
     return { message: '2FA code sent to email (check spam folder)', email, testCode: code };
   }
 
-  async verify2FA(email: string, code: string) {
+  async verify2FA(email: string, code: string, ipAddress: string, userAgent: string) {
     const storedCode = twoFactorCodes.get(email);
+    const user = users.get(email);
 
     if (!storedCode) {
+      this.auditService.log(AuditEventType.TWO_FA_FAILED, {
+        email,
+        ipAddress,
+        userAgent,
+        success: false,
+        details: { reason: 'No 2FA code found' },
+      });
       throw new BadRequestException('No 2FA code found');
     }
 
@@ -85,12 +140,26 @@ export class AuthService {
     }
 
     if (storedCode.code !== code) {
+      this.auditService.log(AuditEventType.TWO_FA_FAILED, {
+        email,
+        userId: user?.id,
+        ipAddress,
+        userAgent,
+        success: false,
+        details: { reason: 'Invalid 2FA code' },
+      });
       throw new BadRequestException('Invalid 2FA code');
     }
 
     twoFactorCodes.delete(email);
 
-    const user = users.get(email);
+    this.auditService.log(AuditEventType.TWO_FA_SUCCESS, {
+      email,
+      userId: user.id,
+      ipAddress,
+      userAgent,
+      success: true,
+    });
     
     // Generate access token (short-lived: 15 minutes)
     const accessToken = this.jwtService.sign(
@@ -134,16 +203,30 @@ export class AuthService {
     throw new UnauthorizedException('User not found');
   }
 
-  async refreshAccessToken(userId: string, refreshToken: string) {
+  async refreshAccessToken(userId: string, refreshToken: string, ipAddress: string, userAgent: string) {
     const tokenKey = `${userId}_${refreshToken}`;
     const storedToken = refreshTokens.get(tokenKey);
 
     if (!storedToken) {
+      this.auditService.log(AuditEventType.TOKEN_REFRESH_FAILED, {
+        userId,
+        ipAddress,
+        userAgent,
+        success: false,
+        details: { reason: 'Invalid refresh token' },
+      });
       throw new UnauthorizedException('Invalid refresh token');
     }
 
     if (Date.now() > storedToken.expiresAt) {
       refreshTokens.delete(tokenKey);
+      this.auditService.log(AuditEventType.TOKEN_REFRESH_FAILED, {
+        userId,
+        ipAddress,
+        userAgent,
+        success: false,
+        details: { reason: 'Refresh token expired' },
+      });
       throw new UnauthorizedException('Refresh token expired');
     }
 
@@ -181,14 +264,31 @@ export class AuthService {
       expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
     });
 
+    this.auditService.log(AuditEventType.TOKEN_REFRESH, {
+      userId: user.id,
+      email: user.email,
+      ipAddress,
+      userAgent,
+      success: true,
+    });
+
     return {
       access_token: newAccessToken,
       refresh_token: newRefreshToken,
     };
   }
 
-  async requestPasswordReset(email: string) {
+  async requestPasswordReset(email: string, ipAddress: string, userAgent: string) {
     const user = users.get(email);
+
+    this.auditService.log(AuditEventType.PASSWORD_RESET_REQUESTED, {
+      email,
+      userId: user?.id,
+      ipAddress,
+      userAgent,
+      success: true,
+      details: { userExists: !!user },
+    });
 
     if (!user) {
       // Don't reveal if email exists (security best practice)
@@ -238,15 +338,28 @@ export class AuthService {
     return { message: 'If email exists, password reset link will be sent' };
   }
 
-  async resetPassword(token: string, newPassword: string) {
+  async resetPassword(token: string, newPassword: string, ipAddress: string, userAgent: string) {
     const resetTokenData = passwordResetTokens.get(token);
 
     if (!resetTokenData) {
+      this.auditService.log(AuditEventType.PASSWORD_RESET_FAILED, {
+        ipAddress,
+        userAgent,
+        success: false,
+        details: { reason: 'Invalid or expired reset token' },
+      });
       throw new BadRequestException('Invalid or expired reset token');
     }
 
     if (Date.now() > resetTokenData.expiresAt) {
       passwordResetTokens.delete(token);
+      this.auditService.log(AuditEventType.PASSWORD_RESET_FAILED, {
+        email: resetTokenData.email,
+        ipAddress,
+        userAgent,
+        success: false,
+        details: { reason: 'Reset token expired' },
+      });
       throw new BadRequestException('Reset token expired');
     }
 
@@ -269,6 +382,14 @@ export class AuthService {
 
     // Delete the used reset token
     passwordResetTokens.delete(token);
+
+    this.auditService.log(AuditEventType.PASSWORD_RESET_SUCCESS, {
+      email: resetTokenData.email,
+      userId: user.id,
+      ipAddress,
+      userAgent,
+      success: true,
+    });
 
     return { message: 'Password reset successful. Please login with your new password.' };
   }

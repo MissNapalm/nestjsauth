@@ -7,6 +7,8 @@ import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
 import { JwtStrategy } from './auth/jwt.strategy';
 import { EmailService } from './email/email.service';
+import { AuditService } from './audit/audit.service';
+import { AuditController } from './audit/audit.controller';
 
 @Module({
   imports: [
@@ -23,7 +25,7 @@ import { EmailService } from './email/email.service';
       },
     ]),
   ],
-  controllers: [AppController, AuthController],
-  providers: [AuthService, JwtStrategy, EmailService],
+  controllers: [AppController, AuthController, AuditController],
+  providers: [AuthService, JwtStrategy, EmailService, AuditService],
 })
 export class AppModule {}
