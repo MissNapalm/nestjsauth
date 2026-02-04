@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NestJS Auth - Portfolio Project</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 400px;
+      padding: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      padding: 40px;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      text-align: center;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      color: #666;
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+      border-bottom: 2px solid #eee;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 14px;
+      color: #999;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.3s;
+    }
+
+    .tab-btn.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #333;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .message {
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .message.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+      display: block;
+    }
+
+    .message.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+      display: block;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      color: #667eea;
+      font-size: 14px;
+    }
+
+    .profile-info {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    .profile-info p {
+      color: #666;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    .profile-info strong {
+      color: #333;
+      display: block;
+      font-size: 16px;
+      margin-bottom: 5px;
+    }
+
+    .logout-btn {
+      margin-top: 20px;
+      background: #dc3545;
+    }
+
+    .logout-btn:hover {
+      box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>🔐 Auth</h1>
+      <p class="subtitle">Login & 2FA with Email</p>
+
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('login')">Login</button>
+        <button class="tab-btn" onclick="switchTab('register')">Register</button>
+        <button class="tab-btn" onclick="switchTab('profile')">Profile</button>
+      </div>
+
+      <!-- Login Tab -->
+      <div id="login" class="tab-content active">
+        <div id="loginMessage" class="message"></div>
+        <form onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="loginEmail" required>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="loginPassword" required>
+          </div>
+          <button type="submit">Send 2FA Code</button>
+          <div class="loading" id="loginLoading">Sending...</div>
+        </form>
+
+        <div id="twoFactorForm" style="display: none; margin-top: 30px;">
+          <h3 style="font-size: 16px; margin-bottom: 20px;">✉️ Check your email!</h3>
+          <form onsubmit="handleVerify2FA(event)">
+            <div class="form-group">
+              <label>2FA Code</label>
+              <input type="text" id="twoFactorCode" placeholder="000000" maxlength="6" required>
+            </div>
+            <button type="submit">Verify & Login</button>
+            <div class="loading" id="verifyLoading">Verifying...</div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Register Tab -->
+      <div id="register" class="tab-content">
+        <div id="registerMessage" class="message"></div>
+        <form onsubmit="handleRegister(event)">
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="registerEmail" required>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="registerPassword" required>
+          </div>
+          <button type="submit">Create Account</button>
+          <div class="loading" id="registerLoading">Creating...</div>
+        </form>
+      </div>
+
+      <!-- Profile Tab -->
+      <div id="profile" class="tab-content">
+        <div id="profileMessage" class="message"></div>
+        <div id="profileContent" style="display: none;">
+          <div class="profile-info">
+            <p>User ID</p>
+            <strong id="profileId"></strong>
+            <p style="margin-top: 15px;">Email</p>
+            <strong id="profileEmail"></strong>
+          </div>
+          <button class="logout-btn" onclick="handleLogout()">Logout</button>
+        </div>
+        <button onclick="loadProfile()" style="display: none;" id="loadProfileBtn">Load Profile</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:3000/auth';
+    let token = localStorage.getItem('token');
+
+    function switchTab(tab) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+      // Show selected tab
+      document.getElementById(tab).classList.add('active');
+      event.target.classList.add('active');
+
+      if (tab === 'profile' && token) {
+        loadProfile();
+      }
+    }
+
+    function showMessage(elementId, message, isError = false) {
+      const el = document.getElementById(elementId);
+      el.textContent = message;
+      el.className = `message ${isError ? 'error' : 'success'}`;
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      const email = document.getElementById('registerEmail').value;
+      const password = document.getElementById('registerPassword').value;
+      const loading = document.getElementById('registerLoading');
+
+      loading.style.display = 'block';
+
+      try {
+        const response = await fetch(`${API_URL}/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          showMessage('registerMessage', '✓ Account created! You can now login.', false);
+          document.getElementById('registerEmail').value = '';
+          document.getElementById('registerPassword').value = '';
+        } else {
+          showMessage('registerMessage', data.message || 'Error registering', true);
+        }
+      } catch (error) {
+        showMessage('registerMessage', 'Network error', true);
+      } finally {
+        loading.style.display = 'none';
+      }
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const loading = document.getElementById('loginLoading');
+
+      loading.style.display = 'block';
+
+      try {
+        const response = await fetch(`${API_URL}/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          showMessage('loginMessage', '✓ Code sent to your email!', false);
+          document.getElementById('twoFactorForm').style.display = 'block';
+          document.getElementById('loginEmail').disabled = true;
+          document.getElementById('loginPassword').disabled = true;
+          localStorage.setItem('loginEmail', email);
+        } else {
+          showMessage('loginMessage', data.message || 'Login failed', true);
+        }
+      } catch (error) {
+        showMessage('loginMessage', 'Network error', true);
+      } finally {
+        loading.style.display = 'none';
+      }
+    }
+
+    async function handleVerify2FA(e) {
+      e.preventDefault();
+      const email = localStorage.getItem('loginEmail');
+      const code = document.getElementById('twoFactorCode').value;
+      const loading = document.getElementById('verifyLoading');
+
+      loading.style.display = 'block';
+
+      try {
+        const response = await fetch(`${API_URL}/verify-2fa`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, code }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          token = data.access_token;
+          localStorage.setItem('token', token);
+          showMessage('loginMessage', '✓ Logged in successfully!', false);
+          
+          // Reset form
+          setTimeout(() => {
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('twoFactorCode').value = '';
+            document.getElementById('twoFactorForm').style.display = 'none';
+            document.getElementById('loginEmail').disabled = false;
+            document.getElementById('loginPassword').disabled = false;
+            switchTab('profile');
+          }, 1500);
+        } else {
+          showMessage('loginMessage', data.message || 'Invalid code', true);
+        }
+      } catch (error) {
+        showMessage('loginMessage', 'Network error', true);
+      } finally {
+        loading.style.display = 'none';
+      }
+    }
+
+    async function loadProfile() {
+      if (!token) {
+        showMessage('profileMessage', 'Please login first', true);
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/profile`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          document.getElementById('profileId').textContent = data.id;
+          document.getElementById('profileEmail').textContent = data.email;
+          document.getElementById('profileContent').style.display = 'block';
+        } else {
+          showMessage('profileMessage', 'Failed to load profile', true);
+        }
+      } catch (error) {
+        showMessage('profileMessage', 'Network error', true);
+      }
+    }
+
+    function handleLogout() {
+      token = null;
+      localStorage.removeItem('token');
+      localStorage.removeItem('loginEmail');
+      document.getElementById('profileContent').style.display = 'none';
+      document.getElementById('profileMessage').className = 'message';
+      switchTab('login');
+    }
+
+    // Auto-load profile if already logged in
+    if (token && window.location.hash === '#profile') {
+      loadProfile();
+    }
+  </script>
+</body>
+</html>
