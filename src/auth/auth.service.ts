@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { AuditService, AuditEventType } from '../audit/audit.service';
@@ -14,10 +15,25 @@ export class AuthService {
     private auditService: AuditService,
   ) {}
 
+  // Cryptographically secure token generation
   private generateSecureToken(): string {
-    return Array.from({ length: 32 }, () => 
-      Math.random().toString(36).charAt(2)
-    ).join('');
+    return crypto.randomBytes(32).toString('hex');
+  }
+
+  // Constant-time comparison to prevent timing attacks
+  private secureCompare(a: string, b: string): boolean {
+    if (a.length !== b.length) {
+      // Still do comparison to maintain constant time
+      crypto.timingSafeEqual(Buffer.from(a), Buffer.from(a));
+      return false;
+    }
+    return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  }
+
+  // Artificial delay to prevent user enumeration via timing
+  private async addSecurityDelay(): Promise<void> {
+    const delay = 100 + Math.random() * 100; // 100-200ms random delay
+    await new Promise(resolve => setTimeout(resolve, delay));
   }
 
   async register(email: string, password: string, ipAddress: string, userAgent: string) {
@@ -216,8 +232,12 @@ export class AuthService {
   // Account lockout constants
   private readonly MAX_LOGIN_ATTEMPTS = 5;
   private readonly LOCKOUT_DURATION_MINUTES = 15;
+  private readonly MAX_2FA_ATTEMPTS = 5;
 
   async login(email: string, password: string, ipAddress: string, userAgent: string) {
+    // Add random delay to prevent timing-based user enumeration
+    await this.addSecurityDelay();
+    
     const user = await this.prisma.user.findUnique({ where: { email } });
 
     this.auditService.log(AuditEventType.LOGIN_ATTEMPT, {
@@ -229,6 +249,9 @@ export class AuthService {
     });
 
     if (!user) {
+      // Perform dummy bcrypt compare to maintain consistent timing
+      await bcrypt.compare(password, '$2a$10$dummy.hash.to.prevent.timing.attacks');
+      
       this.auditService.log(AuditEventType.LOGIN_FAILED, {
         email,
         ipAddress,
@@ -391,14 +414,35 @@ export class AuthService {
       throw new BadRequestException('2FA code expired');
     }
 
-    if (storedCode.code !== code) {
+    // Check 2FA attempt limit (prevent brute force on 6-digit codes)
+    if (storedCode.attempts >= this.MAX_2FA_ATTEMPTS) {
+      await this.prisma.twoFactorCode.delete({ where: { email } });
       this.auditService.log(AuditEventType.TWO_FA_FAILED, {
         email,
         userId: user?.id,
         ipAddress,
         userAgent,
         success: false,
-        details: { reason: 'Invalid 2FA code' },
+        details: { reason: 'Too many 2FA attempts' },
+      });
+      throw new BadRequestException('Too many attempts. Please request a new 2FA code.');
+    }
+
+    // Use timing-safe comparison to prevent timing attacks
+    if (!this.secureCompare(storedCode.code, code)) {
+      // Increment attempt counter
+      await this.prisma.twoFactorCode.update({
+        where: { email },
+        data: { attempts: storedCode.attempts + 1 },
+      });
+      
+      this.auditService.log(AuditEventType.TWO_FA_FAILED, {
+        email,
+        userId: user?.id,
+        ipAddress,
+        userAgent,
+        success: false,
+        details: { reason: 'Invalid 2FA code', attempts: storedCode.attempts + 1 },
       });
       throw new BadRequestException('Invalid 2FA code');
     }
