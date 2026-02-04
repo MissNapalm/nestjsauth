@@ -8,12 +8,8 @@ NestAuth is a modern authentication system built with NestJS, Prisma, and Postgr
 
 ## Overview
 
-This project implements:
-- Security best practices and OWASP recommendations
-- A comprehensive feature set: JWT, 2FA, email verification, password reset, account lockout, rate limiting, audit logging, and more
-- Real-world pentesting and remediation, with audit logs for transparency
-- Modular, scalable code structure for maintainability and extensibility
-- Hardened endpoints, secret management, and robust error handling
+
+This project implements security best practices and OWASP recommendations, real-world pentesting and remediation (with audit logs for transparency), a modular and scalable code structure for maintainability and extensibility, and robust endpoint and secret management.
 
 ---
 
