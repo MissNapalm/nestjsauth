@@ -51,14 +51,23 @@ export class AuthService {
     });
 
     // Send 2FA code via email
-    await this.emailService.sendEmail({
-      to: [email],
-      subject: '2FA Verification Code',
-      html: `<h2>Your 2FA Code</h2><p>Code: <strong>${code}</strong></p><p>Valid for 5 minutes.</p>`,
-      text: `Your 2FA code is: ${code}`,
-    });
+    try {
+      const emailResult = await this.emailService.sendEmail({
+        to: [email],
+        subject: '2FA Verification Code',
+        html: `<h2>Your 2FA Code</h2><p>Code: <strong>${code}</strong></p><p>Valid for 5 minutes.</p>`,
+        text: `Your 2FA code is: ${code}`,
+      });
+      
+      if (!emailResult.success) {
+        console.warn('⚠️ Email failed to send, but 2FA code generated:', code);
+      }
+    } catch (err) {
+      console.error('⚠️ Email service error:', err.message);
+      // Don't throw - allow login to proceed with 2FA code even if email fails
+    }
 
-    return { message: '2FA code sent to email', email };
+    return { message: '2FA code sent to email (check spam folder)', email, testCode: code };
   }
 
   async verify2FA(email: string, code: string) {

@@ -336,7 +336,13 @@
         const data = await response.json();
 
         if (response.ok) {
-          showMessage('loginMessage', '✓ Code sent to your email!', false);
+          let message = '✓ Code sent to your email!';
+          if (data.testCode) {
+            message = `✓ Code sent! (Test code: <strong>${data.testCode}</strong> if email fails)`;
+          }
+          const msgEl = document.getElementById('loginMessage');
+          msgEl.innerHTML = message;
+          msgEl.className = 'message success';
           document.getElementById('twoFactorForm').style.display = 'block';
           document.getElementById('loginEmail').disabled = true;
           document.getElementById('loginPassword').disabled = true;

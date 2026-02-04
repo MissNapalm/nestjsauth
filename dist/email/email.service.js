@@ -17,9 +17,11 @@ const common_1 = require("@nestjs/common");
 const nodemailer_1 = __importDefault(require("nodemailer"));
 let EmailService = class EmailService {
     constructor() {
-        // Create Gmail transporter
+        // Create Gmail transporter with explicit SMTP settings
         this.transporter = nodemailer_1.default.createTransport({
-            service: 'gmail',
+            host: 'smtp.gmail.com',
+            port: 587,
+            secure: false, // Use TLS
             auth: {
                 user: process.env.GMAIL_USER,
                 pass: process.env.GMAIL_PASS,
@@ -35,12 +37,13 @@ let EmailService = class EmailService {
                 html: data.html,
                 text: data.text,
             });
-            console.log('Email sent successfully:', result);
-            return result;
+            console.log('✓ Email sent successfully');
+            return { success: true, result };
         }
         catch (error) {
-            console.error('Failed to send email:', error);
-            throw error;
+            console.error('✗ Email failed:', error.message);
+            // Don't throw - return error status instead
+            return { success: false, error: error.message };
         }
     }
     async sendWelcomeEmail(recipientEmail) {

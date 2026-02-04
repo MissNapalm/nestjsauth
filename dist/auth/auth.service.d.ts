@@ -11,6 +11,7 @@ export declare class AuthService {
     login(email: string, password: string): Promise<{
         message: string;
         email: string;
+        testCode: string;
     }>;
     verify2FA(email: string, code: string): Promise<{
         access_token: string;

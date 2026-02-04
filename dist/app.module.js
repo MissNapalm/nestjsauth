@@ -10,6 +10,7 @@ exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const passport_1 = require("@nestjs/passport");
+const app_controller_1 = require("./app.controller");
 const auth_controller_1 = require("./auth/auth.controller");
 const auth_service_1 = require("./auth/auth.service");
 const jwt_strategy_1 = require("./auth/jwt.strategy");
@@ -26,7 +27,7 @@ exports.AppModule = AppModule = __decorate([
                 signOptions: { expiresIn: '1h' },
             }),
         ],
-        controllers: [auth_controller_1.AuthController],
+        controllers: [app_controller_1.AppController, auth_controller_1.AuthController],
         providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy, email_service_1.EmailService],
     })
 ], AppModule);

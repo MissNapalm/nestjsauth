@@ -15,6 +15,7 @@ export declare class AuthController {
     }): Promise<{
         message: string;
         email: string;
+        testCode: string;
     }>;
     verify2FA(body: {
         email: string;

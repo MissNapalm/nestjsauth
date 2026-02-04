@@ -37,14 +37,16 @@ const core_1 = require("@nestjs/core");
 const app_module_1 = require("./app.module");
 const express = __importStar(require("express"));
 const path = __importStar(require("path"));
+const dotenv = __importStar(require("dotenv"));
+// Load environment variables from .env
+dotenv.config();
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
-    // Enable CORS
     app.enableCors();
-    // Serve static files (frontend)
-    app.use(express.static(path.join(__dirname, '..', 'public')));
-    // Enable JSON body parser with larger limit
     app.use(express.json({ limit: '1mb' }));
+    // Serve static files
+    const publicPath = path.join(__dirname, '..', 'public');
+    app.use(express.static(publicPath));
     await app.listen(3000);
     console.log(`🚀 Server running on http://localhost:3000`);
 }
