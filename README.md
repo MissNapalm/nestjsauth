@@ -60,17 +60,72 @@ A production-ready, secure authentication system built with NestJS, featuring JW
 | GET | `/auth/profile` | Get user profile | ✅ |
 | GET | `/audit` | Get audit logs | ✅ |
 
-## 🛡️ Security Protections
 
-| Attack Type | Protection |
-|-------------|------------|
-| Brute Force | Rate limiting + Account lockout |
-| Credential Stuffing | Account lockout after 5 attempts |
-| XSS | Content-Security-Policy headers |
-| Clickjacking | X-Frame-Options header |
-| Token Replay | Short-lived JWTs + refresh rotation |
-| Password Exposure | bcrypt hashing (10 rounds) |
-| Session Hijacking | HTTP-only cookies, secure tokens |
+## 🛡️ Security Features
+
+This project implements 40+ security features, including:
+
+- JWT authentication (access & refresh tokens)
+- 2FA (two-factor authentication) via email
+- Email verification required before login
+- Password reset with secure, expiring tokens
+- Passwords hashed with bcryptjs (10 rounds)
+- Account lockout after 5 failed login attempts (15 min lock)
+- Multi-tier rate limiting (3/sec, 20/min, 100/15min)
+- Custom IP-based throttler guard (proxy-aware)
+- CORS restricted to allowed origins
+- Security headers (OWASP recommended)
+- Request ID middleware for distributed tracing
+- Audit logging for all auth events
+- Mass assignment protection on DTOs
+- SQL injection protection (Prisma ORM)
+- XSS protection (input sanitization)
+- JWT secret loaded from environment variable
+- Password reset tokens are cryptographically secure
+- Timing attack protection on login (dummy bcrypt hash)
+- Brute force protection for 2FA
+- User enumeration prevention (timing & error messages)
+- Email enumeration prevention
+- Password minimum length (6 chars, needs complexity improvement)
+- Automatic database reset on shutdown (dev only)
+- Audit endpoints protected with JWT guard
+- No JWT alg:none vulnerability
+- All endpoints return generic error messages
+- No password in logs or responses
+- No stack traces in production errors
+- Secure cookie flags (if cookies used)
+- No sensitive data in JWT payload
+- No user info in URL/query params
+- No open CORS wildcards
+- No HTTP parameter pollution
+- No insecure redirects
+- No user-supplied HTML rendered
+- No plaintext password storage
+- No default admin accounts
+- No hardcoded secrets in codebase
+- No excessive error detail in responses
+- No unprotected admin/audit endpoints
+
+### 🧪 Pentesting & Remediation
+
+This project was pentested for:
+- Mass assignment
+- SQL injection
+- XSS
+- User enumeration (timing)
+- Account lockout
+- JWT alg:none
+- Password reset token attacks
+- Security headers
+- CORS
+- Password strength
+
+All vulnerabilities found were fixed and retested. See `/audit/logs` for a full audit trail.
+
+---
+
+> **Portfolio Note:**
+> This project demonstrates practical, hands-on security engineering. All features were implemented, pentested, and remediated as you would in a real-world environment. See the code and audit logs for details.
 
 ## 🛠️ Tech Stack
 
