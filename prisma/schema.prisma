@@ -18,6 +18,10 @@ model User {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   
+  // Account lockout fields
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+  
   // Relations
   refreshTokens   RefreshToken[]
   auditLogs       AuditLog[]

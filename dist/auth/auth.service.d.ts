@@ -26,6 +26,8 @@ export declare class AuthService {
         message: string;
         testToken: string;
     }>;
+    private readonly MAX_LOGIN_ATTEMPTS;
+    private readonly LOCKOUT_DURATION_MINUTES;
     login(email: string, password: string, ipAddress: string, userAgent: string): Promise<{
         message: string;
         email: string;

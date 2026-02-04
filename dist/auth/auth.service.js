@@ -55,6 +55,9 @@ let AuthService = class AuthService {
         this.jwtService = jwtService;
         this.emailService = emailService;
         this.auditService = auditService;
+        // Account lockout constants
+        this.MAX_LOGIN_ATTEMPTS = 5;
+        this.LOCKOUT_DURATION_MINUTES = 15;
     }
     generateSecureToken() {
         return Array.from({ length: 32 }, () => Math.random().toString(36).charAt(2)).join('');
@@ -249,17 +252,72 @@ let AuthService = class AuthService {
             });
             throw new common_1.UnauthorizedException('Invalid credentials');
         }
-        const passwordMatch = await bcrypt.compare(password, user.password);
-        if (!passwordMatch) {
+        // Check if account is locked
+        if (user.lockedUntil && new Date() < user.lockedUntil) {
+            const remainingMinutes = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000);
             this.auditService.log(audit_service_1.AuditEventType.LOGIN_FAILED, {
                 email,
                 userId: user.id,
                 ipAddress,
                 userAgent,
                 success: false,
-                details: { reason: 'Invalid password' },
+                details: { reason: 'Account locked', remainingMinutes },
             });
-            throw new common_1.UnauthorizedException('Invalid credentials');
+            throw new common_1.UnauthorizedException(`Account is locked. Try again in ${remainingMinutes} minute(s).`);
+        }
+        // If lockout has expired, reset the counter
+        if (user.lockedUntil && new Date() >= user.lockedUntil) {
+            await this.prisma.user.update({
+                where: { id: user.id },
+                data: { failedLoginAttempts: 0, lockedUntil: null },
+            });
+        }
+        const passwordMatch = await bcrypt.compare(password, user.password);
+        if (!passwordMatch) {
+            // Increment failed attempts
+            const newFailedAttempts = user.failedLoginAttempts + 1;
+            const shouldLock = newFailedAttempts >= this.MAX_LOGIN_ATTEMPTS;
+            await this.prisma.user.update({
+                where: { id: user.id },
+                data: {
+                    failedLoginAttempts: newFailedAttempts,
+                    lockedUntil: shouldLock
+                        ? new Date(Date.now() + this.LOCKOUT_DURATION_MINUTES * 60 * 1000)
+                        : null,
+                },
+            });
+            if (shouldLock) {
+                this.auditService.log(audit_service_1.AuditEventType.ACCOUNT_LOCKED, {
+                    email,
+                    userId: user.id,
+                    ipAddress,
+                    userAgent,
+                    success: false,
+                    details: { reason: 'Too many failed attempts', attempts: newFailedAttempts },
+                });
+                throw new common_1.UnauthorizedException(`Account locked due to ${this.MAX_LOGIN_ATTEMPTS} failed attempts. Try again in ${this.LOCKOUT_DURATION_MINUTES} minutes.`);
+            }
+            this.auditService.log(audit_service_1.AuditEventType.LOGIN_FAILED, {
+                email,
+                userId: user.id,
+                ipAddress,
+                userAgent,
+                success: false,
+                details: {
+                    reason: 'Invalid password',
+                    failedAttempts: newFailedAttempts,
+                    attemptsRemaining: this.MAX_LOGIN_ATTEMPTS - newFailedAttempts,
+                },
+            });
+            const attemptsRemaining = this.MAX_LOGIN_ATTEMPTS - newFailedAttempts;
+            throw new common_1.UnauthorizedException(`Invalid credentials. ${attemptsRemaining} attempt(s) remaining before account lockout.`);
+        }
+        // Successful password - reset failed attempts
+        if (user.failedLoginAttempts > 0) {
+            await this.prisma.user.update({
+                where: { id: user.id },
+                data: { failedLoginAttempts: 0, lockedUntil: null },
+            });
         }
         // Check if email is verified
         if (!user.emailVerified) {

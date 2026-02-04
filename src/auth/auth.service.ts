@@ -213,6 +213,10 @@ export class AuthService {
     };
   }
 
+  // Account lockout constants
+  private readonly MAX_LOGIN_ATTEMPTS = 5;
+  private readonly LOCKOUT_DURATION_MINUTES = 15;
+
   async login(email: string, password: string, ipAddress: string, userAgent: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
 
@@ -235,17 +239,79 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) {
+    // Check if account is locked
+    if (user.lockedUntil && new Date() < user.lockedUntil) {
+      const remainingMinutes = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000);
       this.auditService.log(AuditEventType.LOGIN_FAILED, {
         email,
         userId: user.id,
         ipAddress,
         userAgent,
         success: false,
-        details: { reason: 'Invalid password' },
+        details: { reason: 'Account locked', remainingMinutes },
       });
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException(`Account is locked. Try again in ${remainingMinutes} minute(s).`);
+    }
+
+    // If lockout has expired, reset the counter
+    if (user.lockedUntil && new Date() >= user.lockedUntil) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { failedLoginAttempts: 0, lockedUntil: null },
+      });
+    }
+
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      // Increment failed attempts
+      const newFailedAttempts = user.failedLoginAttempts + 1;
+      const shouldLock = newFailedAttempts >= this.MAX_LOGIN_ATTEMPTS;
+      
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          failedLoginAttempts: newFailedAttempts,
+          lockedUntil: shouldLock 
+            ? new Date(Date.now() + this.LOCKOUT_DURATION_MINUTES * 60 * 1000)
+            : null,
+        },
+      });
+
+      if (shouldLock) {
+        this.auditService.log(AuditEventType.ACCOUNT_LOCKED, {
+          email,
+          userId: user.id,
+          ipAddress,
+          userAgent,
+          success: false,
+          details: { reason: 'Too many failed attempts', attempts: newFailedAttempts },
+        });
+        throw new UnauthorizedException(`Account locked due to ${this.MAX_LOGIN_ATTEMPTS} failed attempts. Try again in ${this.LOCKOUT_DURATION_MINUTES} minutes.`);
+      }
+
+      this.auditService.log(AuditEventType.LOGIN_FAILED, {
+        email,
+        userId: user.id,
+        ipAddress,
+        userAgent,
+        success: false,
+        details: { 
+          reason: 'Invalid password', 
+          failedAttempts: newFailedAttempts,
+          attemptsRemaining: this.MAX_LOGIN_ATTEMPTS - newFailedAttempts,
+        },
+      });
+      
+      const attemptsRemaining = this.MAX_LOGIN_ATTEMPTS - newFailedAttempts;
+      throw new UnauthorizedException(`Invalid credentials. ${attemptsRemaining} attempt(s) remaining before account lockout.`);
+    }
+
+    // Successful password - reset failed attempts
+    if (user.failedLoginAttempts > 0) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { failedLoginAttempts: 0, lockedUntil: null },
+      });
     }
 
     // Check if email is verified
