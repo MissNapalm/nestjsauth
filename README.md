@@ -1,17 +1,19 @@
 
+
 # 🔐 NestAuth: Enterprise-Grade Secure Authentication for Node.js
 
-A showcase of advanced security engineering, built with NestJS, Prisma, and PostgreSQL. This project demonstrates how to build a modern authentication system with 40+ security features, real pentesting, and professional code structure.
+NestAuth is a modern authentication system built with NestJS, Prisma, and PostgreSQL. It is designed to demonstrate secure engineering practices, modular architecture, and thorough security controls suitable for production environments and portfolio use.
 
 ---
 
-## 🚀 Why This Project Stands Out
+## Overview
 
-- **Security-First Design:** Implements industry best practices and OWASP recommendations throughout.
-- **Comprehensive Feature Set:** JWT, 2FA, email verification, password reset, account lockout, rate limiting, audit logging, and more.
-- **Real Pentesting:** Vulnerabilities were actively tested, discovered, and remediated. Audit logs prove the process.
-- **Modular, Scalable Code:** Follows professional backend architecture for maintainability and extensibility.
-- **Production-Ready:** All critical endpoints protected, secrets managed, and error handling hardened.
+This project implements:
+- Security best practices and OWASP recommendations
+- A comprehensive feature set: JWT, 2FA, email verification, password reset, account lockout, rate limiting, audit logging, and more
+- Real-world pentesting and remediation, with audit logs for transparency
+- Modular, scalable code structure for maintainability and extensibility
+- Hardened endpoints, secret management, and robust error handling
 
 ---
 
