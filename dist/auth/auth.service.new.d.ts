@@ -11,13 +11,13 @@ export declare class AuthService {
     private generateSecureToken;
     register(email: string, password: string, ipAddress: string, userAgent: string): Promise<{
         message: string;
-        userId: string;
+        userId: any;
         requiresVerification: boolean;
         testToken: string;
     }>;
     verifyEmail(token: string, ipAddress: string, userAgent: string): Promise<{
         message: string;
-        email: string;
+        email: any;
     }>;
     resendVerificationEmail(email: string, ipAddress: string, userAgent: string): Promise<{
         message: string;
@@ -35,16 +35,11 @@ export declare class AuthService {
         access_token: string;
         refresh_token: string;
         user: {
-            id: string;
-            email: string;
+            id: any;
+            email: any;
         };
     }>;
-    getProfile(userId: string): Promise<{
-        id: string;
-        email: string;
-        emailVerified: boolean;
-        createdAt: Date;
-    }>;
+    getProfile(userId: string): Promise<any>;
     refreshAccessToken(userId: string, refreshToken: string, ipAddress: string, userAgent: string): Promise<{
         access_token: string;
     }>;
@@ -59,4 +54,4 @@ export declare class AuthService {
         message: string;
     }>;
 }
-//# sourceMappingURL=auth.service.d.ts.map
+//# sourceMappingURL=auth.service.new.d.ts.map

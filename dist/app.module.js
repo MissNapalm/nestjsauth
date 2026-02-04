@@ -18,12 +18,14 @@ const jwt_strategy_1 = require("./auth/jwt.strategy");
 const email_service_1 = require("./email/email.service");
 const audit_service_1 = require("./audit/audit.service");
 const audit_controller_1 = require("./audit/audit.controller");
+const prisma_module_1 = require("./prisma/prisma.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
+            prisma_module_1.PrismaModule,
             passport_1.PassportModule,
             jwt_1.JwtModule.register({
                 secret: process.env.JWT_SECRET || 'super-secret-key',

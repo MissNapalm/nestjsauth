@@ -9,9 +9,11 @@ import { JwtStrategy } from './auth/jwt.strategy';
 import { EmailService } from './email/email.service';
 import { AuditService } from './audit/audit.service';
 import { AuditController } from './audit/audit.controller';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
+    PrismaModule,
     PassportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'super-secret-key',

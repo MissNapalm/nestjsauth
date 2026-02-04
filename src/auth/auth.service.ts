@@ -1,26 +1,30 @@
 import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
+import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { AuditService, AuditEventType } from '../audit/audit.service';
-
-// In-memory storage (replace with database in production)
-const users = new Map<string, any>();
-const twoFactorCodes = new Map<string, { code: string; expiresAt: number }>();
-const refreshTokens = new Map<string, { token: string; expiresAt: number }>();
-const passwordResetTokens = new Map<string, { email: string; expiresAt: number }>();
-const emailVerificationTokens = new Map<string, { email: string; expiresAt: number }>();
 
 @Injectable()
 export class AuthService {
   constructor(
+    private prisma: PrismaService,
     private jwtService: JwtService,
     private emailService: EmailService,
     private auditService: AuditService,
   ) {}
 
+  private generateSecureToken(): string {
+    return Array.from({ length: 32 }, () => 
+      Math.random().toString(36).charAt(2)
+    ).join('');
+  }
+
   async register(email: string, password: string, ipAddress: string, userAgent: string) {
-    if (users.has(email)) {
+    // Check if user exists
+    const existingUser = await this.prisma.user.findUnique({ where: { email } });
+    
+    if (existingUser) {
       this.auditService.log(AuditEventType.REGISTER_FAILED, {
         email,
         ipAddress,
@@ -32,21 +36,25 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const userId = Math.random().toString(36).substring(7);
 
-    users.set(email, {
-      id: userId,
-      email,
-      password: hashedPassword,
-      emailVerified: false,
-      createdAt: new Date(),
+    // Create user in database
+    const user = await this.prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        emailVerified: false,
+      },
     });
 
     // Generate email verification token
     const verificationToken = this.generateSecureToken();
-    emailVerificationTokens.set(verificationToken, {
-      email,
-      expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+    await this.prisma.verificationToken.create({
+      data: {
+        token: verificationToken,
+        email,
+        type: 'EMAIL_VERIFICATION',
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      },
     });
 
     // Send verification email
@@ -70,7 +78,7 @@ export class AuthService {
     }
 
     this.auditService.log(AuditEventType.REGISTER_SUCCESS, {
-      userId,
+      userId: user.id,
       email,
       ipAddress,
       userAgent,
@@ -78,7 +86,7 @@ export class AuthService {
     });
 
     this.auditService.log(AuditEventType.EMAIL_VERIFICATION_SENT, {
-      userId,
+      userId: user.id,
       email,
       ipAddress,
       userAgent,
@@ -87,22 +95,18 @@ export class AuthService {
 
     return { 
       message: 'Registration successful. Please check your email to verify your account.',
-      userId,
+      userId: user.id,
       requiresVerification: true,
       testToken: verificationToken, // Remove in production
     };
   }
 
-  private generateSecureToken(): string {
-    return Array.from({ length: 32 }, () => 
-      Math.random().toString(36).charAt(2)
-    ).join('');
-  }
-
   async verifyEmail(token: string, ipAddress: string, userAgent: string) {
-    const tokenData = emailVerificationTokens.get(token);
+    const tokenData = await this.prisma.verificationToken.findUnique({
+      where: { token },
+    });
 
-    if (!tokenData) {
+    if (!tokenData || tokenData.type !== 'EMAIL_VERIFICATION') {
       this.auditService.log(AuditEventType.EMAIL_VERIFICATION_FAILED, {
         ipAddress,
         userAgent,
@@ -112,8 +116,8 @@ export class AuthService {
       throw new BadRequestException('Invalid or expired verification link');
     }
 
-    if (Date.now() > tokenData.expiresAt) {
-      emailVerificationTokens.delete(token);
+    if (new Date() > tokenData.expiresAt) {
+      await this.prisma.verificationToken.delete({ where: { token } });
       this.auditService.log(AuditEventType.EMAIL_VERIFICATION_FAILED, {
         email: tokenData.email,
         ipAddress,
@@ -124,16 +128,14 @@ export class AuthService {
       throw new BadRequestException('Verification link has expired. Please request a new one.');
     }
 
-    const user = users.get(tokenData.email);
-    if (!user) {
-      emailVerificationTokens.delete(token);
-      throw new BadRequestException('User not found');
-    }
+    // Update user as verified
+    const user = await this.prisma.user.update({
+      where: { email: tokenData.email },
+      data: { emailVerified: true },
+    });
 
-    // Mark email as verified
-    user.emailVerified = true;
-    users.set(tokenData.email, user);
-    emailVerificationTokens.delete(token);
+    // Delete the token
+    await this.prisma.verificationToken.delete({ where: { token } });
 
     this.auditService.log(AuditEventType.EMAIL_VERIFICATION_SUCCESS, {
       userId: user.id,
@@ -150,7 +152,7 @@ export class AuthService {
   }
 
   async resendVerificationEmail(email: string, ipAddress: string, userAgent: string) {
-    const user = users.get(email);
+    const user = await this.prisma.user.findUnique({ where: { email } });
 
     // Always return success to prevent email enumeration
     if (!user) {
@@ -162,17 +164,19 @@ export class AuthService {
     }
 
     // Delete any existing tokens for this email
-    for (const [token, data] of emailVerificationTokens.entries()) {
-      if (data.email === email) {
-        emailVerificationTokens.delete(token);
-      }
-    }
+    await this.prisma.verificationToken.deleteMany({
+      where: { email, type: 'EMAIL_VERIFICATION' },
+    });
 
     // Generate new verification token
     const verificationToken = this.generateSecureToken();
-    emailVerificationTokens.set(verificationToken, {
-      email,
-      expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+    await this.prisma.verificationToken.create({
+      data: {
+        token: verificationToken,
+        email,
+        type: 'EMAIL_VERIFICATION',
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      },
     });
 
     // Send verification email
@@ -210,7 +214,7 @@ export class AuthService {
   }
 
   async login(email: string, password: string, ipAddress: string, userAgent: string) {
-    const user = users.get(email);
+    const user = await this.prisma.user.findUnique({ where: { email } });
 
     this.auditService.log(AuditEventType.LOGIN_ATTEMPT, {
       email,
@@ -259,9 +263,19 @@ export class AuthService {
 
     // Generate 2FA code
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    twoFactorCodes.set(email, {
-      code,
-      expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
+    
+    // Upsert 2FA code (replace if exists)
+    await this.prisma.twoFactorCode.upsert({
+      where: { email },
+      update: {
+        code,
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
+      },
+      create: {
+        email,
+        code,
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
+      },
     });
 
     // Send 2FA code via email
@@ -292,8 +306,8 @@ export class AuthService {
   }
 
   async verify2FA(email: string, code: string, ipAddress: string, userAgent: string) {
-    const storedCode = twoFactorCodes.get(email);
-    const user = users.get(email);
+    const storedCode = await this.prisma.twoFactorCode.findUnique({ where: { email } });
+    const user = await this.prisma.user.findUnique({ where: { email } });
 
     if (!storedCode) {
       this.auditService.log(AuditEventType.TWO_FA_FAILED, {
@@ -306,8 +320,8 @@ export class AuthService {
       throw new BadRequestException('No 2FA code found');
     }
 
-    if (Date.now() > storedCode.expiresAt) {
-      twoFactorCodes.delete(email);
+    if (new Date() > storedCode.expiresAt) {
+      await this.prisma.twoFactorCode.delete({ where: { email } });
       throw new BadRequestException('2FA code expired');
     }
 
@@ -323,7 +337,7 @@ export class AuthService {
       throw new BadRequestException('Invalid 2FA code');
     }
 
-    twoFactorCodes.delete(email);
+    await this.prisma.twoFactorCode.delete({ where: { email } });
 
     this.auditService.log(AuditEventType.TWO_FA_SUCCESS, {
       email,
@@ -353,10 +367,13 @@ export class AuthService {
       { expiresIn: '7d' },
     );
 
-    // Store refresh token
-    refreshTokens.set(`${user.id}_${refreshToken}`, {
-      token: refreshToken,
-      expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+    // Store refresh token in database
+    await this.prisma.refreshToken.create({
+      data: {
+        token: refreshToken,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      },
     });
 
     return {
@@ -367,19 +384,24 @@ export class AuthService {
   }
 
   async getProfile(userId: string) {
-    for (const user of users.values()) {
-      if (user.id === userId) {
-        return { id: user.id, email: user.email };
-      }
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, emailVerified: true, createdAt: true },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
     }
-    throw new UnauthorizedException('User not found');
+
+    return user;
   }
 
   async refreshAccessToken(userId: string, refreshToken: string, ipAddress: string, userAgent: string) {
-    const tokenKey = `${userId}_${refreshToken}`;
-    const storedToken = refreshTokens.get(tokenKey);
+    const storedToken = await this.prisma.refreshToken.findUnique({
+      where: { token: refreshToken },
+    });
 
-    if (!storedToken) {
+    if (!storedToken || storedToken.userId !== userId) {
       this.auditService.log(AuditEventType.TOKEN_REFRESH_FAILED, {
         userId,
         ipAddress,
@@ -390,28 +412,18 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    if (Date.now() > storedToken.expiresAt) {
-      refreshTokens.delete(tokenKey);
-      this.auditService.log(AuditEventType.TOKEN_REFRESH_FAILED, {
-        userId,
-        ipAddress,
-        userAgent,
-        success: false,
-        details: { reason: 'Refresh token expired' },
-      });
+    if (new Date() > storedToken.expiresAt) {
+      await this.prisma.refreshToken.delete({ where: { token: refreshToken } });
       throw new UnauthorizedException('Refresh token expired');
     }
 
-    const user = users.get([...users.values()].find(u => u.id === userId)?.email);
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
 
-    // Delete old refresh token (rotation)
-    refreshTokens.delete(tokenKey);
-
     // Generate new access token
-    const newAccessToken = this.jwtService.sign(
+    const accessToken = this.jwtService.sign(
       {
         sub: user.id,
         email: user.email,
@@ -420,144 +432,114 @@ export class AuthService {
       { expiresIn: '15m' },
     );
 
-    // Generate new refresh token
-    const newRefreshToken = this.jwtService.sign(
-      {
-        sub: user.id,
-        email: user.email,
-        type: 'refresh',
-      },
-      { expiresIn: '7d' },
-    );
-
-    // Store new refresh token
-    refreshTokens.set(`${user.id}_${newRefreshToken}`, {
-      token: newRefreshToken,
-      expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
-    });
-
     this.auditService.log(AuditEventType.TOKEN_REFRESH, {
-      userId: user.id,
+      userId,
       email: user.email,
       ipAddress,
       userAgent,
       success: true,
     });
 
-    return {
-      access_token: newAccessToken,
-      refresh_token: newRefreshToken,
-    };
+    return { access_token: accessToken };
   }
 
   async requestPasswordReset(email: string, ipAddress: string, userAgent: string) {
-    const user = users.get(email);
+    const user = await this.prisma.user.findUnique({ where: { email } });
 
+    // Always return success to prevent email enumeration
     this.auditService.log(AuditEventType.PASSWORD_RESET_REQUESTED, {
       email,
       userId: user?.id,
       ipAddress,
       userAgent,
       success: true,
-      details: { userExists: !!user },
     });
 
     if (!user) {
-      // Don't reveal if email exists (security best practice)
-      return { message: 'If email exists, password reset link will be sent' };
+      return { message: 'If the email exists, a reset link will be sent.' };
     }
 
-    // Generate secure reset token (JWT-based)
-    const resetToken = this.jwtService.sign(
-      {
-        sub: user.id,
-        email: user.email,
-        type: 'password-reset',
-      },
-      { expiresIn: '15m' }, // 15 minute expiration
-    );
+    // Delete any existing password reset tokens
+    await this.prisma.verificationToken.deleteMany({
+      where: { email, type: 'PASSWORD_RESET' },
+    });
 
-    // Store reset token
-    passwordResetTokens.set(resetToken, {
-      email: email,
-      expiresAt: Date.now() + 15 * 60 * 1000, // 15 minutes
+    // Generate reset token
+    const resetToken = this.generateSecureToken();
+    await this.prisma.verificationToken.create({
+      data: {
+        token: resetToken,
+        email,
+        type: 'PASSWORD_RESET',
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+      },
     });
 
     // Send reset email
+    const resetLink = `http://localhost:3000?reset=${resetToken}`;
     try {
-      const resetLink = `http://localhost:3000/?tab=reset&token=${resetToken}`;
       await this.emailService.sendEmail({
         to: [email],
         subject: 'Password Reset Request',
         html: `
           <h2>Password Reset</h2>
-          <p>Use the token below to reset your password. This token expires in 15 minutes.</p>
-          <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 15px 0; word-break: break-all;">
-            <strong>Your Reset Token:</strong><br>
-            <code style="font-size: 12px; color: #333;">${resetToken}</code>
-          </div>
-          <p>Copy the token above and paste it into the reset password form.</p>
-          <hr style="margin: 20px 0;">
-          <p>Or click this link: <a href="${resetLink}">Reset Password</a></p>
-          <p style="color: #666; font-size: 12px;">If you didn't request this, ignore this email.</p>
+          <p>Click the link below to reset your password:</p>
+          <p><a href="${resetLink}" style="background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Reset Password</a></p>
+          <p>Or copy this link: ${resetLink}</p>
+          <p>This link expires in 1 hour.</p>
+          <p><strong>Test Token:</strong> ${resetToken}</p>
         `,
-        text: `Your password reset token: ${resetToken}\n\nOr visit: ${resetLink}`,
+        text: `Reset your password: ${resetLink}\nTest Token: ${resetToken}`,
       });
     } catch (err) {
-      console.error('⚠️ Password reset email failed:', err.message);
+      console.error('⚠️ Email service error:', err.message);
     }
 
-    return { message: 'If email exists, password reset link will be sent' };
+    return { 
+      message: 'If the email exists, a reset link will be sent.',
+      testToken: resetToken, // Remove in production
+    };
   }
 
   async resetPassword(token: string, newPassword: string, ipAddress: string, userAgent: string) {
-    const resetTokenData = passwordResetTokens.get(token);
+    const tokenData = await this.prisma.verificationToken.findUnique({
+      where: { token },
+    });
 
-    if (!resetTokenData) {
+    if (!tokenData || tokenData.type !== 'PASSWORD_RESET') {
       this.auditService.log(AuditEventType.PASSWORD_RESET_FAILED, {
         ipAddress,
         userAgent,
         success: false,
-        details: { reason: 'Invalid or expired reset token' },
+        details: { reason: 'Invalid reset token' },
       });
       throw new BadRequestException('Invalid or expired reset token');
     }
 
-    if (Date.now() > resetTokenData.expiresAt) {
-      passwordResetTokens.delete(token);
-      this.auditService.log(AuditEventType.PASSWORD_RESET_FAILED, {
-        email: resetTokenData.email,
-        ipAddress,
-        userAgent,
-        success: false,
-        details: { reason: 'Reset token expired' },
-      });
-      throw new BadRequestException('Reset token expired');
+    if (new Date() > tokenData.expiresAt) {
+      await this.prisma.verificationToken.delete({ where: { token } });
+      throw new BadRequestException('Reset token has expired. Please request a new one.');
     }
 
-    const user = users.get(resetTokenData.email);
-    if (!user) {
-      throw new BadRequestException('User not found');
-    }
-
-    // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
-    users.set(resetTokenData.email, user);
 
-    // Invalidate all refresh tokens for this user (security: force re-login on other devices)
-    const tokensToDelete = [...passwordResetTokens.entries()]
-      .filter(([_, data]) => data.email === resetTokenData.email)
-      .map(([key]) => key);
-    
-    tokensToDelete.forEach(key => passwordResetTokens.delete(key));
+    // Update password
+    const user = await this.prisma.user.update({
+      where: { email: tokenData.email },
+      data: { password: hashedPassword },
+    });
 
-    // Delete the used reset token
-    passwordResetTokens.delete(token);
+    // Delete the token
+    await this.prisma.verificationToken.delete({ where: { token } });
+
+    // Revoke all refresh tokens for this user (force re-login)
+    await this.prisma.refreshToken.deleteMany({
+      where: { userId: user.id },
+    });
 
     this.auditService.log(AuditEventType.PASSWORD_RESET_SUCCESS, {
-      email: resetTokenData.email,
       userId: user.id,
+      email: tokenData.email,
       ipAddress,
       userAgent,
       success: true,

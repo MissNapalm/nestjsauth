@@ -30,23 +30,28 @@ export declare class AuthController {
         access_token: string;
         refresh_token: string;
         user: {
-            id: any;
-            email: any;
+            id: string;
+            email: string;
         };
     }>;
     refreshToken(body: RefreshTokenDto, req: any): Promise<{
         access_token: string;
-        refresh_token: string;
     }>;
     requestPasswordReset(body: RequestPasswordResetDto, req: any): Promise<{
         message: string;
+        testToken?: undefined;
+    } | {
+        message: string;
+        testToken: string;
     }>;
     resetPassword(body: ResetPasswordDto, req: any): Promise<{
         message: string;
     }>;
     getProfile(req: any): Promise<{
-        id: any;
-        email: any;
+        id: string;
+        email: string;
+        emailVerified: boolean;
+        createdAt: Date;
     }>;
 }
 //# sourceMappingURL=auth.controller.d.ts.map
