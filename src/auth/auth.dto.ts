@@ -2,8 +2,8 @@ import { IsEmail, IsString, MinLength, MaxLength, Matches } from 'class-validato
 import { Transform } from 'class-transformer';
 
 export class RegisterDto {
-  @IsEmail({}, { message: 'Invalid email format' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @IsEmail({}, { message: 'Invalid email format' })
   email: string;
 
   @IsString()
@@ -13,8 +13,8 @@ export class RegisterDto {
 }
 
 export class LoginDto {
-  @IsEmail({}, { message: 'Invalid email format' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @IsEmail({}, { message: 'Invalid email format' })
   email: string;
 
   @IsString()
@@ -23,8 +23,8 @@ export class LoginDto {
 }
 
 export class Verify2FADto {
-  @IsEmail({}, { message: 'Invalid email format' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @IsEmail({}, { message: 'Invalid email format' })
   email: string;
 
   @IsString()
@@ -38,8 +38,8 @@ export class RefreshTokenDto {
 }
 
 export class RequestPasswordResetDto {
-  @IsEmail({}, { message: 'Invalid email format' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @IsEmail({}, { message: 'Invalid email format' })
   email: string;
 }
 

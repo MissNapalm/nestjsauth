@@ -16,8 +16,8 @@ class RegisterDto {
 }
 exports.RegisterDto = RegisterDto;
 __decorate([
-    (0, class_validator_1.IsEmail)({}, { message: 'Invalid email format' }),
     (0, class_transformer_1.Transform)(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value)),
+    (0, class_validator_1.IsEmail)({}, { message: 'Invalid email format' }),
     __metadata("design:type", String)
 ], RegisterDto.prototype, "email", void 0);
 __decorate([
@@ -30,8 +30,8 @@ class LoginDto {
 }
 exports.LoginDto = LoginDto;
 __decorate([
-    (0, class_validator_1.IsEmail)({}, { message: 'Invalid email format' }),
     (0, class_transformer_1.Transform)(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value)),
+    (0, class_validator_1.IsEmail)({}, { message: 'Invalid email format' }),
     __metadata("design:type", String)
 ], LoginDto.prototype, "email", void 0);
 __decorate([
@@ -43,8 +43,8 @@ class Verify2FADto {
 }
 exports.Verify2FADto = Verify2FADto;
 __decorate([
-    (0, class_validator_1.IsEmail)({}, { message: 'Invalid email format' }),
     (0, class_transformer_1.Transform)(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value)),
+    (0, class_validator_1.IsEmail)({}, { message: 'Invalid email format' }),
     __metadata("design:type", String)
 ], Verify2FADto.prototype, "email", void 0);
 __decorate([
@@ -63,8 +63,8 @@ class RequestPasswordResetDto {
 }
 exports.RequestPasswordResetDto = RequestPasswordResetDto;
 __decorate([
-    (0, class_validator_1.IsEmail)({}, { message: 'Invalid email format' }),
     (0, class_transformer_1.Transform)(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value)),
+    (0, class_validator_1.IsEmail)({}, { message: 'Invalid email format' }),
     __metadata("design:type", String)
 ], RequestPasswordResetDto.prototype, "email", void 0);
 class ResetPasswordDto {
