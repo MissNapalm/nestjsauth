@@ -197,6 +197,7 @@
       <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('login', event)">Login</button>
         <button class="tab-btn" onclick="switchTab('register', event)">Register</button>
+        <button class="tab-btn" onclick="switchTab('forgot', event)">Forgot Password</button>
         <button class="tab-btn" onclick="switchTab('profile', event)">Profile</button>
       </div>
 
@@ -243,6 +244,38 @@
           </div>
           <button type="submit">Create Account</button>
           <div class="loading" id="registerLoading">Creating...</div>
+        </form>
+      </div>
+
+      <!-- Forgot Password Tab -->
+      <div id="forgot" class="tab-content">
+        <div id="forgotMessage" class="message"></div>
+        
+        <!-- Step 1: Request Reset -->
+        <form id="requestResetForm" onsubmit="handleRequestReset(event)">
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="forgotEmail" required>
+          </div>
+          <button type="submit">Send Reset Link</button>
+          <div class="loading" id="requestResetLoading">Sending...</div>
+        </form>
+
+        <!-- Step 2: Reset Password -->
+        <form id="resetPasswordForm" style="display: none;" onsubmit="handleResetPassword(event)">
+          <div style="background: #e7f3ff; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; color: #0066cc;">
+            ✓ Reset link sent! Check your email for the link with the reset token.
+          </div>
+          <div class="form-group">
+            <label>Reset Token</label>
+            <input type="text" id="resetToken" placeholder="Paste token from email" required style="font-size: 12px;">
+          </div>
+          <div class="form-group">
+            <label>New Password</label>
+            <input type="password" id="newPassword" required>
+          </div>
+          <button type="submit">Reset Password</button>
+          <div class="loading" id="resetPasswordLoading">Resetting...</div>
         </form>
       </div>
 
@@ -441,6 +474,78 @@
       document.getElementById('profileContent').style.display = 'none';
       document.getElementById('profileMessage').className = 'message';
       switchTab('login');
+    }
+
+    async function handleRequestReset(e) {
+      e.preventDefault();
+      const email = document.getElementById('forgotEmail').value;
+      const loading = document.getElementById('requestResetLoading');
+
+      loading.style.display = 'block';
+
+      try {
+        const response = await fetch(`${API_URL}/request-password-reset`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          showMessage('forgotMessage', '✓ Reset link sent to your email!', false);
+          document.getElementById('requestResetForm').style.display = 'none';
+          document.getElementById('resetPasswordForm').style.display = 'block';
+          document.getElementById('forgotEmail').disabled = true;
+        } else {
+          showMessage('forgotMessage', data.message || 'Error sending reset link', true);
+        }
+      } catch (error) {
+        showMessage('forgotMessage', 'Network error', true);
+      } finally {
+        loading.style.display = 'none';
+      }
+    }
+
+    async function handleResetPassword(e) {
+      e.preventDefault();
+      const token = document.getElementById('resetToken').value;
+      const password = document.getElementById('newPassword').value;
+      const loading = document.getElementById('resetPasswordLoading');
+
+      loading.style.display = 'block';
+
+      try {
+        const response = await fetch(`${API_URL}/reset-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, password }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          showMessage('forgotMessage', '✓ Password reset successful! Please login with your new password.', false);
+          
+          setTimeout(() => {
+            // Reset form
+            document.getElementById('forgotEmail').value = '';
+            document.getElementById('forgotEmail').disabled = false;
+            document.getElementById('resetToken').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('requestResetForm').style.display = 'block';
+            document.getElementById('resetPasswordForm').style.display = 'none';
+            document.getElementById('forgotMessage').className = 'message';
+            switchTab('login');
+          }, 2000);
+        } else {
+          showMessage('forgotMessage', data.message || 'Error resetting password', true);
+        }
+      } catch (error) {
+        showMessage('forgotMessage', 'Network error', true);
+      } finally {
+        loading.style.display = 'none';
+      }
     }
 
     // Auto-load profile if already logged in
