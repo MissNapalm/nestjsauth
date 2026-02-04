@@ -51,6 +51,7 @@ const email_service_1 = require("../email/email.service");
 const users = new Map();
 const twoFactorCodes = new Map();
 const refreshTokens = new Map();
+const passwordResetTokens = new Map();
 let AuthService = class AuthService {
     constructor(jwtService, emailService) {
         this.jwtService = jwtService;
@@ -184,6 +185,72 @@ let AuthService = class AuthService {
             access_token: newAccessToken,
             refresh_token: newRefreshToken,
         };
+    }
+    async requestPasswordReset(email) {
+        const user = users.get(email);
+        if (!user) {
+            // Don't reveal if email exists (security best practice)
+            return { message: 'If email exists, password reset link will be sent' };
+        }
+        // Generate secure reset token (JWT-based)
+        const resetToken = this.jwtService.sign({
+            sub: user.id,
+            email: user.email,
+            type: 'password-reset',
+        }, { expiresIn: '15m' });
+        // Store reset token
+        passwordResetTokens.set(resetToken, {
+            email: email,
+            expiresAt: Date.now() + 15 * 60 * 1000, // 15 minutes
+        });
+        // Send reset email
+        try {
+            const resetLink = `http://localhost:3000/?tab=reset&token=${resetToken}`;
+            await this.emailService.sendEmail({
+                to: [email],
+                subject: 'Password Reset Request',
+                html: `
+          <h2>Password Reset</h2>
+          <p>Click the link below to reset your password. This link expires in 15 minutes.</p>
+          <a href="${resetLink}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+            Reset Password
+          </a>
+          <p>Or copy this link: ${resetLink}</p>
+          <p>If you didn't request this, ignore this email.</p>
+        `,
+                text: `Reset your password: ${resetLink}`,
+            });
+        }
+        catch (err) {
+            console.error('⚠️ Password reset email failed:', err.message);
+        }
+        return { message: 'If email exists, password reset link will be sent' };
+    }
+    async resetPassword(token, newPassword) {
+        const resetTokenData = passwordResetTokens.get(token);
+        if (!resetTokenData) {
+            throw new common_1.BadRequestException('Invalid or expired reset token');
+        }
+        if (Date.now() > resetTokenData.expiresAt) {
+            passwordResetTokens.delete(token);
+            throw new common_1.BadRequestException('Reset token expired');
+        }
+        const user = users.get(resetTokenData.email);
+        if (!user) {
+            throw new common_1.BadRequestException('User not found');
+        }
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        user.password = hashedPassword;
+        users.set(resetTokenData.email, user);
+        // Invalidate all refresh tokens for this user (security: force re-login on other devices)
+        const tokensToDelete = [...passwordResetTokens.entries()]
+            .filter(([_, data]) => data.email === resetTokenData.email)
+            .map(([key]) => key);
+        tokensToDelete.forEach(key => passwordResetTokens.delete(key));
+        // Delete the used reset token
+        passwordResetTokens.delete(token);
+        return { message: 'Password reset successful. Please login with your new password.' };
     }
 };
 exports.AuthService = AuthService;

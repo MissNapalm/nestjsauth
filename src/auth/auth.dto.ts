@@ -36,3 +36,19 @@ export class RefreshTokenDto {
   @IsString()
   refresh_token: string;
 }
+
+export class RequestPasswordResetDto {
+  @IsEmail({}, { message: 'Invalid email format' })
+  @Transform(({ value }) => value?.trim().toLowerCase())
+  email: string;
+}
+
+export class ResetPasswordDto {
+  @IsString()
+  token: string;
+
+  @IsString()
+  @MinLength(6, { message: 'Password must be at least 6 characters' })
+  @MaxLength(128, { message: 'Password must not exceed 128 characters' })
+  password: string;
+}

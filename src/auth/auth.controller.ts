@@ -2,7 +2,7 @@ import { Controller, Post, Get, Body, UseGuards, Request, ValidationPipe } from 
 import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, Verify2FADto, RefreshTokenDto } from './auth.dto';
+import { RegisterDto, LoginDto, Verify2FADto, RefreshTokenDto, RequestPasswordResetDto, ResetPasswordDto } from './auth.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -37,6 +37,18 @@ export class AuthController {
     } catch (err) {
       throw new Error('Invalid refresh token format');
     }
+  }
+
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 requests per minute (strict rate limit)
+  @Post('request-password-reset')
+  async requestPasswordReset(@Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })) body: RequestPasswordResetDto) {
+    return this.authService.requestPasswordReset(body.email);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
+  @Post('reset-password')
+  async resetPassword(@Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })) body: ResetPasswordDto) {
+    return this.authService.resetPassword(body.token, body.password);
   }
 
   @UseGuards(AuthGuard('jwt'))

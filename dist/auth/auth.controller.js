@@ -42,6 +42,12 @@ let AuthController = class AuthController {
             throw new Error('Invalid refresh token format');
         }
     }
+    async requestPasswordReset(body) {
+        return this.authService.requestPasswordReset(body.email);
+    }
+    async resetPassword(body) {
+        return this.authService.resetPassword(body.token, body.password);
+    }
     async getProfile(req) {
         return this.authService.getProfile(req.user.userId);
     }
@@ -84,6 +90,24 @@ __decorate([
     __metadata("design:paramtypes", [auth_dto_1.RefreshTokenDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "refreshToken", null);
+__decorate([
+    (0, throttler_1.Throttle)({ default: { limit: 3, ttl: 60000 } }) // 3 requests per minute (strict rate limit)
+    ,
+    (0, common_1.Post)('request-password-reset'),
+    __param(0, (0, common_1.Body)(new common_1.ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [auth_dto_1.RequestPasswordResetDto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "requestPasswordReset", null);
+__decorate([
+    (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
+    ,
+    (0, common_1.Post)('reset-password'),
+    __param(0, (0, common_1.Body)(new common_1.ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [auth_dto_1.ResetPasswordDto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "resetPassword", null);
 __decorate([
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
     (0, common_1.Get)('profile'),

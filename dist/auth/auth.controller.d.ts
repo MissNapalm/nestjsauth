@@ -1,5 +1,5 @@
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, Verify2FADto, RefreshTokenDto } from './auth.dto';
+import { RegisterDto, LoginDto, Verify2FADto, RefreshTokenDto, RequestPasswordResetDto, ResetPasswordDto } from './auth.dto';
 export declare class AuthController {
     private authService;
     constructor(authService: AuthService);
@@ -23,6 +23,12 @@ export declare class AuthController {
     refreshToken(body: RefreshTokenDto, req: any): Promise<{
         access_token: string;
         refresh_token: string;
+    }>;
+    requestPasswordReset(body: RequestPasswordResetDto): Promise<{
+        message: string;
+    }>;
+    resetPassword(body: ResetPasswordDto): Promise<{
+        message: string;
     }>;
     getProfile(req: any): Promise<{
         id: any;

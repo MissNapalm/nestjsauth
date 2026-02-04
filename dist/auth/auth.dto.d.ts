@@ -13,4 +13,11 @@ export declare class Verify2FADto {
 export declare class RefreshTokenDto {
     refresh_token: string;
 }
+export declare class RequestPasswordResetDto {
+    email: string;
+}
+export declare class ResetPasswordDto {
+    token: string;
+    password: string;
+}
 //# sourceMappingURL=auth.dto.d.ts.map
