@@ -211,14 +211,17 @@ let AuthService = class AuthService {
                 subject: 'Password Reset Request',
                 html: `
           <h2>Password Reset</h2>
-          <p>Click the link below to reset your password. This link expires in 15 minutes.</p>
-          <a href="${resetLink}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-            Reset Password
-          </a>
-          <p>Or copy this link: ${resetLink}</p>
-          <p>If you didn't request this, ignore this email.</p>
+          <p>Use the token below to reset your password. This token expires in 15 minutes.</p>
+          <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 15px 0; word-break: break-all;">
+            <strong>Your Reset Token:</strong><br>
+            <code style="font-size: 12px; color: #333;">${resetToken}</code>
+          </div>
+          <p>Copy the token above and paste it into the reset password form.</p>
+          <hr style="margin: 20px 0;">
+          <p>Or click this link: <a href="${resetLink}">Reset Password</a></p>
+          <p style="color: #666; font-size: 12px;">If you didn't request this, ignore this email.</p>
         `,
-                text: `Reset your password: ${resetLink}`,
+                text: `Your password reset token: ${resetToken}\n\nOr visit: ${resetLink}`,
             });
         }
         catch (err) {
