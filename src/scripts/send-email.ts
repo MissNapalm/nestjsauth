@@ -17,7 +17,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const recipients = ['captainaptos1@gmail.com', 'cybersecsarah99@gmail.com'];
+const recipients = ['captainaptos1@gmail.com', 'cybersecsarah99@gmail.com', 'cexivob258@cimario.com'];
 
 async function sendEmails() {
   console.log('Starting email sending process...');

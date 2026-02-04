@@ -16,12 +16,12 @@ async function sendEmails() {
     
     const result = await transporter.sendMail({
       from: process.env.SENDER_EMAIL,
-      to: ['captainaptos1@gmail.com', 'cybersecsarah99@gmail.com'],
+      to: ['captainaptos1@gmail.com', 'cybersecsarah99@gmail.com', 'cexivob258@cimario.com'],
       subject: 'Welcome!',
       html: `
         <h1>Welcome to Our Service!</h1>
         <p>This is a test email from NestJS with Gmail SMTP.</p>
-        <p>Both emails should now arrive in your Gmail inbox!</p>
+        <p>Emails sent to all recipients!</p>
       `,
       text: 'Welcome! This is a test email from NestJS with Gmail SMTP.',
     });
