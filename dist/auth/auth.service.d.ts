@@ -9,6 +9,8 @@ export declare class AuthService {
     private auditService;
     constructor(prisma: PrismaService, jwtService: JwtService, emailService: EmailService, auditService: AuditService);
     private generateSecureToken;
+    private secureCompare;
+    private addSecurityDelay;
     register(email: string, password: string, ipAddress: string, userAgent: string): Promise<{
         message: string;
         userId: string;
@@ -28,6 +30,7 @@ export declare class AuthService {
     }>;
     private readonly MAX_LOGIN_ATTEMPTS;
     private readonly LOCKOUT_DURATION_MINUTES;
+    private readonly MAX_2FA_ATTEMPTS;
     login(email: string, password: string, ipAddress: string, userAgent: string): Promise<{
         message: string;
         email: string;

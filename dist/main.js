@@ -68,7 +68,13 @@ async function bootstrap() {
         transform: true,
         transformOptions: { enableImplicitConversion: true },
     }));
-    app.enableCors();
+    // CORS configuration - restrict to allowed origins
+    app.enableCors({
+        origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+        credentials: true,
+    });
     app.use(express.json({ limit: '1mb' }));
     // Serve static files
     const publicPath = path.join(__dirname, '..', 'public');

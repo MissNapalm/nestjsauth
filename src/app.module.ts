@@ -16,7 +16,7 @@ import { PrismaModule } from './prisma/prisma.module';
     PrismaModule,
     PassportModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'super-secret-key',
+      secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1h' },
     }),
     // Rate limiting: 10 requests per 15 minutes

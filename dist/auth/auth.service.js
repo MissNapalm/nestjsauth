@@ -46,6 +46,7 @@ exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const bcrypt = __importStar(require("bcryptjs"));
+const crypto = __importStar(require("crypto"));
 const prisma_service_1 = require("../prisma/prisma.service");
 const email_service_1 = require("../email/email.service");
 const audit_service_1 = require("../audit/audit.service");
@@ -58,9 +59,25 @@ let AuthService = class AuthService {
         // Account lockout constants
         this.MAX_LOGIN_ATTEMPTS = 5;
         this.LOCKOUT_DURATION_MINUTES = 15;
+        this.MAX_2FA_ATTEMPTS = 5;
     }
+    // Cryptographically secure token generation
     generateSecureToken() {
-        return Array.from({ length: 32 }, () => Math.random().toString(36).charAt(2)).join('');
+        return crypto.randomBytes(32).toString('hex');
+    }
+    // Constant-time comparison to prevent timing attacks
+    secureCompare(a, b) {
+        if (a.length !== b.length) {
+            // Still do comparison to maintain constant time
+            crypto.timingSafeEqual(Buffer.from(a), Buffer.from(a));
+            return false;
+        }
+        return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+    }
+    // Artificial delay to prevent user enumeration via timing
+    async addSecurityDelay() {
+        const delay = 100 + Math.random() * 100; // 100-200ms random delay
+        await new Promise(resolve => setTimeout(resolve, delay));
     }
     async register(email, password, ipAddress, userAgent) {
         // Check if user exists
@@ -234,6 +251,8 @@ let AuthService = class AuthService {
         };
     }
     async login(email, password, ipAddress, userAgent) {
+        // Add random delay to prevent timing-based user enumeration
+        await this.addSecurityDelay();
         const user = await this.prisma.user.findUnique({ where: { email } });
         this.auditService.log(audit_service_1.AuditEventType.LOGIN_ATTEMPT, {
             email,
@@ -243,6 +262,8 @@ let AuthService = class AuthService {
             details: { userExists: !!user },
         });
         if (!user) {
+            // Perform dummy bcrypt compare to maintain consistent timing
+            await bcrypt.compare(password, '$2a$10$dummy.hash.to.prevent.timing.attacks');
             this.auditService.log(audit_service_1.AuditEventType.LOGIN_FAILED, {
                 email,
                 ipAddress,
@@ -387,14 +408,33 @@ let AuthService = class AuthService {
             await this.prisma.twoFactorCode.delete({ where: { email } });
             throw new common_1.BadRequestException('2FA code expired');
         }
-        if (storedCode.code !== code) {
+        // Check 2FA attempt limit (prevent brute force on 6-digit codes)
+        if (storedCode.attempts >= this.MAX_2FA_ATTEMPTS) {
+            await this.prisma.twoFactorCode.delete({ where: { email } });
             this.auditService.log(audit_service_1.AuditEventType.TWO_FA_FAILED, {
                 email,
                 userId: user?.id,
                 ipAddress,
                 userAgent,
                 success: false,
-                details: { reason: 'Invalid 2FA code' },
+                details: { reason: 'Too many 2FA attempts' },
+            });
+            throw new common_1.BadRequestException('Too many attempts. Please request a new 2FA code.');
+        }
+        // Use timing-safe comparison to prevent timing attacks
+        if (!this.secureCompare(storedCode.code, code)) {
+            // Increment attempt counter
+            await this.prisma.twoFactorCode.update({
+                where: { email },
+                data: { attempts: storedCode.attempts + 1 },
+            });
+            this.auditService.log(audit_service_1.AuditEventType.TWO_FA_FAILED, {
+                email,
+                userId: user?.id,
+                ipAddress,
+                userAgent,
+                success: false,
+                details: { reason: 'Invalid 2FA code', attempts: storedCode.attempts + 1 },
             });
             throw new common_1.BadRequestException('Invalid 2FA code');
         }
