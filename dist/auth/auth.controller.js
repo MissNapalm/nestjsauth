@@ -57,7 +57,7 @@ __decorate([
     (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
     ,
     (0, common_1.Post)('register'),
-    __param(0, (0, common_1.Body)(new common_1.ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))),
+    __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [auth_dto_1.RegisterDto]),
     __metadata("design:returntype", Promise)
@@ -66,7 +66,7 @@ __decorate([
     (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
     ,
     (0, common_1.Post)('login'),
-    __param(0, (0, common_1.Body)(new common_1.ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))),
+    __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [auth_dto_1.LoginDto]),
     __metadata("design:returntype", Promise)
@@ -75,7 +75,7 @@ __decorate([
     (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
     ,
     (0, common_1.Post)('verify-2fa'),
-    __param(0, (0, common_1.Body)(new common_1.ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))),
+    __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [auth_dto_1.Verify2FADto]),
     __metadata("design:returntype", Promise)
@@ -84,7 +84,7 @@ __decorate([
     (0, throttler_1.Throttle)({ default: { limit: 10, ttl: 60000 } }) // 10 requests per minute (more lenient for refresh)
     ,
     (0, common_1.Post)('refresh'),
-    __param(0, (0, common_1.Body)(new common_1.ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))),
+    __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [auth_dto_1.RefreshTokenDto, Object]),
@@ -94,7 +94,7 @@ __decorate([
     (0, throttler_1.Throttle)({ default: { limit: 3, ttl: 60000 } }) // 3 requests per minute (strict rate limit)
     ,
     (0, common_1.Post)('request-password-reset'),
-    __param(0, (0, common_1.Body)(new common_1.ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))),
+    __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [auth_dto_1.RequestPasswordResetDto]),
     __metadata("design:returntype", Promise)
@@ -103,7 +103,7 @@ __decorate([
     (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
     ,
     (0, common_1.Post)('reset-password'),
-    __param(0, (0, common_1.Body)(new common_1.ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))),
+    __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [auth_dto_1.ResetPasswordDto]),
     __metadata("design:returntype", Promise)

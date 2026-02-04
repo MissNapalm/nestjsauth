@@ -10,25 +10,25 @@ export class AuthController {
 
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   @Post('register')
-  async register(@Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })) body: RegisterDto) {
+  async register(@Body() body: RegisterDto) {
     return this.authService.register(body.email, body.password);
   }
 
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   @Post('login')
-  async login(@Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })) body: LoginDto) {
+  async login(@Body() body: LoginDto) {
     return this.authService.login(body.email, body.password);
   }
 
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   @Post('verify-2fa')
-  async verify2FA(@Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })) body: Verify2FADto) {
+  async verify2FA(@Body() body: Verify2FADto) {
     return this.authService.verify2FA(body.email, body.code);
   }
 
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 requests per minute (more lenient for refresh)
   @Post('refresh')
-  async refreshToken(@Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })) body: RefreshTokenDto, @Request() req) {
+  async refreshToken(@Body() body: RefreshTokenDto, @Request() req) {
     // Get userId from the JWT payload in Authorization header
     // For now, we'll extract it from the refresh token itself
     try {
@@ -41,13 +41,13 @@ export class AuthController {
 
   @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 requests per minute (strict rate limit)
   @Post('request-password-reset')
-  async requestPasswordReset(@Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })) body: RequestPasswordResetDto) {
+  async requestPasswordReset(@Body() body: RequestPasswordResetDto) {
     return this.authService.requestPasswordReset(body.email);
   }
 
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   @Post('reset-password')
-  async resetPassword(@Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })) body: ResetPasswordDto) {
+  async resetPassword(@Body() body: ResetPasswordDto) {
     return this.authService.resetPassword(body.token, body.password);
   }
 
