@@ -252,8 +252,9 @@ export class AuthService {
     });
 
     if (!user) {
-      // Perform dummy bcrypt compare to maintain consistent timing
-      await bcrypt.compare(password, '$2a$10$dummy.hash.to.prevent.timing.attacks');
+      // Perform dummy bcrypt compare with VALID hash to maintain consistent timing
+      // This prevents timing-based user enumeration attacks
+      await bcrypt.compare(password, '$2a$10$BDuXtBZdHxgOSc54rLPQEufQWquQT7fSpFIru3Zh4FmW7hXXnQCZC');
       
       this.auditService.log(AuditEventType.LOGIN_FAILED, {
         email,

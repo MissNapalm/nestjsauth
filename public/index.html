@@ -603,14 +603,19 @@
           localStorage.setItem('pendingVerificationEmail', email);
           
           let message = '✓ Account created! Please verify your email.';
-          if (data.testToken) {
-            message = `✓ Account created! (Test token: <strong>${data.testToken}</strong>)`;
-          }
+          // Hide testToken in production
+          // if (data.testToken) {
+          //   message = `✓ Account created! (Test token: <strong>${data.testToken}</strong>)`;
+          // }
           const msgEl = document.getElementById('registerMessage');
           msgEl.innerHTML = message;
           msgEl.className = 'message success';
         } else {
-          showMessage('registerMessage', data.message || 'Error registering', true);
+          // Prevent user enumeration: never show 'User already exists' message
+          const genericMsg = (data && data.message && data.message.toLowerCase().includes('already exists'))
+            ? 'Registration failed. Please try again.'
+            : (data.message || 'Error registering');
+          showMessage('registerMessage', genericMsg, true);
         }
       } catch (error) {
         showMessage('registerMessage', 'Network error', true);
@@ -677,9 +682,10 @@
 
         if (response.ok) {
           let message = '✓ Verification email sent!';
-          if (data.testToken) {
-            message = `✓ Email sent! (Test token: <strong>${data.testToken}</strong>)`;
-          }
+          // Hide testToken in production
+          // if (data.testToken) {
+          //   message = `✓ Email sent! (Test token: <strong>${data.testToken}</strong>)`;
+          // }
           const msgEl = document.getElementById('registerMessage');
           msgEl.innerHTML = message;
           msgEl.className = 'message success';
@@ -712,9 +718,10 @@
 
         if (response.ok) {
           let message = '✓ Code sent to your email!';
-          if (data.testCode) {
-            message = `✓ Code sent! (Test code: <strong>${data.testCode}</strong> if email fails)`;
-          }
+          // Hide testCode in production
+          // if (data.testCode) {
+          //   message = `✓ Code sent! (Test code: <strong>${data.testCode}</strong> if email fails)`;
+          // }
           const msgEl = document.getElementById('loginMessage');
           msgEl.innerHTML = message;
           msgEl.className = 'message success';
@@ -816,6 +823,11 @@
 
     function openResetModal() {
       document.getElementById('resetModal').classList.add('active');
+      // Always focus password field if reset form is visible (with slight delay for DOM)
+      setTimeout(() => {
+        const pw = document.getElementById('newPassword');
+        if (pw && pw.offsetParent !== null) pw.focus();
+      }, 100);
     }
 
     function closeResetModal() {
@@ -910,11 +922,13 @@
       loadProfile();
     }
 
-    // Check for email verification token in URL
-    (function checkVerificationToken() {
+
+    // Check for email verification or password reset token in URL
+    (function checkTokensInUrl() {
       const urlParams = new URLSearchParams(window.location.search);
       const verifyToken = urlParams.get('verify');
-      
+      const resetToken = urlParams.get('reset');
+
       if (verifyToken) {
         // Switch to register tab and show verification form
         switchTab('register', null);
@@ -922,7 +936,20 @@
         document.getElementById('verifyEmailForm').style.display = 'block';
         document.getElementById('verifyToken').value = verifyToken;
         showMessage('registerMessage', 'Verification token detected! Click "Verify Email" to confirm.', false);
-        
+        // Clear the URL parameter
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (resetToken) {
+        // Open reset modal, show reset form, pre-fill token
+        openResetModal();
+        document.getElementById('requestResetForm').style.display = 'none';
+        document.getElementById('resetPasswordForm').style.display = 'block';
+        document.getElementById('forgotEmail').disabled = true;
+        document.getElementById('resetToken').value = resetToken;
+        // Focus password field after modal is visible
+        setTimeout(() => {
+          const pw = document.getElementById('newPassword');
+          if (pw && pw.offsetParent !== null) pw.focus();
+        }, 100);
         // Clear the URL parameter
         window.history.replaceState({}, document.title, window.location.pathname);
       }
