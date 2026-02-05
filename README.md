@@ -145,7 +145,7 @@ This project underwent systematic security testing covering common vulnerability
 | Weak Password Policy | ⚠️ Partial | 6-char minimum enforced (complexity pending) |
 > **Note:** Password complexity requirements are intentionally relaxed (6-character minimum) for testing and demo purposes. Enforce a stronger policy before production.
 
-**Documentation**: Full audit trail available via `/audit/logs` endpoint (requires authentication).
+**Documentation**: Full audit trail available via `/audit/logs` endpoint
 
 ---
 
