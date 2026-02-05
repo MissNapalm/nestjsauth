@@ -109,6 +109,48 @@ nestauth/
 
 ---
 
+## 🛡️ Full Security Feature List
+
+This project implements a comprehensive set of security controls, including but not limited to:
+
+- JWT-based authentication (access & refresh tokens)
+- Two-factor authentication (2FA) via email
+- Mandatory email verification before account activation
+- Secure password reset flow with expiring, cryptographically secure tokens
+- Password complexity enforcement (6+ chars, relaxed for testing)
+- bcrypt password hashing (10 rounds)
+- No plaintext password storage
+- No sensitive data in JWT payloads
+- No user information in URL parameters
+- No passwords in logs or API responses
+- Secure cookie flags (when applicable)
+- Role-based access control for sensitive endpoints (e.g., audit logs)
+- Account lockout after 5 failed login attempts (15-minute duration)
+- Multi-tier rate limiting (3 req/sec, 20 req/min, 100 req/15min)
+- Proxy-aware IP-based throttling
+- Brute force protection on 2FA endpoints
+- User enumeration prevention (timing and error message hardening)
+- Email enumeration prevention
+- SQL injection prevention (Prisma ORM parameterization)
+- XSS protection (input sanitization)
+- Mass assignment protection (DTO whitelisting)
+- CORS restricted to allowed origins
+- OWASP-recommended HTTP security headers (via Helmet)
+- No JWT algorithm confusion vulnerability (alg:none)
+- Generic error messages (no information leakage)
+- No stack traces in production
+- Request ID middleware for distributed tracing
+- Comprehensive audit logging for all authentication events
+- Security event alerting (e.g., high-risk actions)
+- Automatic database reset on shutdown (development only)
+- Modular guards and middleware for extensibility
+- Penetration tested against OWASP Top 10
+- Documented remediation for all discovered vulnerabilities
+- Full audit trail available via `/audit/logs` endpoint (open for development only)
+- Security-focused code reviews and documentation
+
+---
+
 ## 🧪 Penetration Testing & Remediation
 
 This project underwent systematic security testing covering common vulnerability classes:
@@ -128,6 +170,7 @@ This project underwent systematic security testing covering common vulnerability
 | Missing Security Headers | ✅ Fixed | Implemented Helmet with OWASP recommendations |
 | CORS Misconfiguration | ✅ Fixed | Restricted to specific allowed origins |
 | Weak Password Policy | ⚠️ Partial | 6-char minimum enforced (complexity pending) |
+> **Note:** Password complexity requirements are intentionally relaxed (6-character minimum) for testing and demo purposes. Enforce a stronger policy before production.
 
 **Documentation**: Full audit trail available via `/audit/logs` endpoint (requires authentication).
 
