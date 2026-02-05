@@ -20,7 +20,7 @@ let AuditController = class AuditController {
     constructor(auditService) {
         this.auditService = auditService;
     }
-    // Get audit logs (protected - only authenticated users)
+    // WARNING: This endpoint is open for development only. Remove before production!
     getLogs(eventType, email, riskLevel, limit) {
         return this.auditService.getLogs({
             eventType,
@@ -36,8 +36,9 @@ let AuditController = class AuditController {
 };
 exports.AuditController = AuditController;
 __decorate([
-    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
-    (0, common_1.Get)('logs'),
+    (0, common_1.Get)('logs')
+    // WARNING: This endpoint is open for development only. Remove before production!
+    ,
     __param(0, (0, common_1.Query)('eventType')),
     __param(1, (0, common_1.Query)('email')),
     __param(2, (0, common_1.Query)('riskLevel')),

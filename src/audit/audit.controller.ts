@@ -6,9 +6,8 @@ import { AuditService, AuditEventType } from './audit.service';
 export class AuditController {
   constructor(private auditService: AuditService) {}
 
-  // Get audit logs (protected - only authenticated users)
-  @UseGuards(AuthGuard('jwt'))
   @Get('logs')
+  // WARNING: This endpoint is open for development only. Remove before production!
   getLogs(
     @Query('eventType') eventType?: AuditEventType,
     @Query('email') email?: string,

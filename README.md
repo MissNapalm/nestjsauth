@@ -145,6 +145,7 @@ This project underwent systematic security testing covering common vulnerability
 | `POST` | `/auth/request-password-reset` | Request password reset email |
 | `POST` | `/auth/reset-password` | Reset password with token |
 | `GET` | `/auth/verify-email` | Verify email address |
+| `GET` | `/audit/logs` | Access audit logs <br> <sub>Open for development only. Remove public access before production.</sub> |
 
 ### Protected Endpoints (Requires JWT)
 
@@ -154,8 +155,17 @@ This project underwent systematic security testing covering common vulnerability
 | `POST` | `/auth/setup-2fa` | Enable two-factor authentication |
 | `POST` | `/auth/verify-2fa` | Verify 2FA code |
 | `GET` | `/auth/profile` | Retrieve user profile |
-| `GET` | `/audit/logs` | Access audit logs |
 | `GET` | `/audit/summary` | View security dashboard |
+
+---
+
+## 📑 Audit Logs
+
+Audit logs are available via the `/audit/logs` endpoint.
+
+> **Note:** For development ease, this endpoint is currently open and does not require authentication. Remove this in production for security.
+
+You can filter logs by `eventType`, `email`, `riskLevel`, and `limit` (default: 50).
 
 ---
 
