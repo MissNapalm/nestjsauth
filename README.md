@@ -21,7 +21,6 @@ NestAuth is a comprehensive authentication system built to showcase professional
 ## 🎯 Purpose
 
 This project was developed as a portfolio piece to demonstrate:
-- Deep understanding of authentication security principles
 - Practical application of secure coding practices
 - Ability to identify and remediate security vulnerabilities
 - Professional-grade code organization and documentation
