@@ -66,51 +66,6 @@ nestauth/
 
 ### Core Security Features
 
-**Authentication & Authorization**
-- JWT-based authentication with access and refresh tokens
-- Two-factor authentication (2FA) via email
-- Mandatory email verification before account activation
-- Secure password reset flow with expiring tokens
-- Role-based access control on audit endpoints
-
-**Cryptographic Security**
-- bcrypt password hashing (10 rounds)
-- Cryptographically secure random tokens for password reset
-- JWT secrets loaded from environment variables (no hardcoded secrets)
-- Timing attack protection during credential validation
-
-**Attack Prevention**
-- Account lockout after 5 failed login attempts (15-minute duration)
-- Multi-tier rate limiting: 3 req/sec, 20 req/min, 100 req/15min
-- Proxy-aware IP-based throttling
-- Brute force protection on 2FA endpoints
-- User enumeration prevention (consistent timing & error messages)
-- Email enumeration prevention
-- SQL injection prevention (Prisma ORM parameterization)
-- XSS protection (input sanitization)
-- Mass assignment protection (validated DTOs)
-- CORS restricted to allowed origins
-
-**Security Headers & Configuration**
-- OWASP-recommended HTTP security headers (via Helmet)
-- No JWT algorithm confusion vulnerability (alg:none)
-- Generic error messages (no information leakage)
-- No stack traces in production
-- Request ID middleware for distributed tracing
-- Comprehensive audit logging for all authentication events
-
-**Data Protection**
-- No plaintext password storage
-- No sensitive data in JWT payload
-- No user information in URL parameters
-- No passwords in logs or API responses
-- Secure cookie flags (when applicable)
-- Automatic database reset on shutdown (development only)
-
----
-
-## 🛡️ Full Security Feature List
-
 This project implements a comprehensive set of security controls, including but not limited to:
 
 - JWT-based authentication (access & refresh tokens)
@@ -148,6 +103,9 @@ This project implements a comprehensive set of security controls, including but 
 - Documented remediation for all discovered vulnerabilities
 - Full audit trail available via `/audit/logs` endpoint (open for development only)
 - Security-focused code reviews and documentation
+
+---
+
 
 ---
 
