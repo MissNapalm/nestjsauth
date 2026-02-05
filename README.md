@@ -72,6 +72,7 @@ nestauth/
 - Mandatory email verification before account activation
 - Secure password reset flow with expiring tokens
 - Role-based access control on audit endpoints
+- Email verification requirement for registration
 
 **Cryptographic Security**
 - bcrypt password hashing (10 rounds)
