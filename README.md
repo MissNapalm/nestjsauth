@@ -1,6 +1,6 @@
 # 🔐 NestAuth
 
-**Enterprise-Grade Authentication System**  
+**Defense in Depth Authentication System**  
 *A production-ready authentication API demonstrating modern security engineering practices*
 
 ---
