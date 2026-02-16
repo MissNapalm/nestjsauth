@@ -121,9 +121,6 @@ This project implements a comprehensive set of security controls, organized as f
 
 ---
 
-
----
-
 ## 🧪 Penetration Testing & Remediation
 
 This project underwent systematic security testing covering common vulnerability classes:
@@ -143,6 +140,7 @@ This project underwent systematic security testing covering common vulnerability
 | Missing Security Headers | ✅ Fixed | Implemented Helmet with OWASP recommendations |
 | CORS Misconfiguration | ✅ Fixed | Restricted to specific allowed origins |
 | Weak Password Policy | ⚠️ Partial | 6-char minimum enforced (complexity pending) |
+
 > **Note:** Password complexity requirements are intentionally relaxed (6-character minimum) for testing and demo purposes. Enforce a stronger policy before production.
 
 **Documentation**: Full audit trail available via `/audit/logs` endpoint
@@ -177,61 +175,55 @@ This project underwent systematic security testing covering common vulnerability
 
 ## 📑 Audit Logs
 
-Audit logs are available via the `/audit/logs` endpoint.
+Audit logs are available via the `/audit/logs` endpoint. You can filter by `eventType`, `email`, `riskLevel`, and `limit` (default: 50).
+
+> **Note:** This endpoint is open for development ease. Remove public access before production.
 
 ---
 
-## Installation and Setup
+## ⚙️ Installation & Setup
 
-⚠️ This project requires full manual setup. There is no hosted demo — you'll need to configure your own database, JWT secret, and (optionally) email credentials locally.
+It's mostly just cloning and filling in a `.env` — shouldn't take more than a few minutes.
 
-Prerequisites
+**Prerequisites:** Node.js 18+, PostgreSQL 14+, npm
 
-Node.js 18+
-PostgreSQL 14+
-npm
-
-1. Clone & Install
-bashgit clone https://github.com/MissNapalm/nestjsauth.git
+```bash
+# Clone and install
+git clone https://github.com/MissNapalm/nestjsauth.git
 cd nestjsauth
 npm install
-2. Configure Environment Variables
-bashcp .env.example .env
-Then open .env and fill in:
-DATABASE_URL="postgresql://your_user:your_password@localhost:5432/nestauth"
-JWT_SECRET="your-strong-random-secret"
-EMAIL_HOST="smtp.gmail.com"
-EMAIL_PORT=587
-EMAIL_USER="your-email@gmail.com"
-EMAIL_PASS="your-app-specific-password"
-3. Set Up PostgreSQL
-Create the database manually before running migrations:
-sqlCREATE DATABASE nestauth;
-4. Run Migrations & Start
-bashnpx prisma migrate dev
-npm run dev
-The API will be available at http://localhost:3000.
+
+# Set up environment variables
+cp .env.example .env
 ```
 
-### Configuration
-
-Create a `.env` file with the following variables:
+Open `.env` and fill in your database URL, a JWT secret, and optionally your email credentials:
 
 ```env
-# Database Connection
-DATABASE_URL="postgresql://user:password@localhost:5432/nestauth"
+DATABASE_URL="postgresql://your_user:your_password@localhost:5432/nestauth"
+JWT_SECRET="your-strong-random-secret"
 
-# JWT Configuration (use a strong, random secret)
-JWT_SECRET="your-cryptographically-secure-secret-key"
-
-# Email Configuration (optional - required for verification & password reset)
+# Optional — only needed for email verification & password reset
 EMAIL_HOST="smtp.gmail.com"
 EMAIL_PORT=587
 EMAIL_USER="your-email@gmail.com"
 EMAIL_PASS="your-app-specific-password"
 ```
 
-**Security Note**: Never commit the `.env` file to version control. Use strong, randomly generated values for production deployments.
+Then create the database, run migrations, and start the server:
+
+```bash
+# In psql
+CREATE DATABASE nestauth;
+
+# Back in your terminal
+npx prisma migrate dev
+npm run dev
+```
+
+API will be live at `http://localhost:3000`. That's it!
+
+> **Security Note:** Never commit your `.env` file. Use strong, randomly generated values for production.
 
 ---
 
