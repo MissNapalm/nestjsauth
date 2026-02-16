@@ -182,36 +182,38 @@ Audit logs are available via the `/audit/logs` endpoint.
 > **Note:** For development ease, this endpoint is currently open and does not require authentication. Remove this in production for security.
 
 You can filter logs by `eventType`, `email`, `riskLevel`, and `limit` (default: 50).
+ Installation & Setup
 
----
+⚠️ This project requires full manual setup. There is no hosted demo — you'll need to configure your own database, JWT secret, and (optionally) email credentials locally.
 
-## ⚙️ Installation & Setup
+Prerequisites
 
-### Prerequisites
+Node.js 18+
+PostgreSQL 14+
+npm
 
-- Node.js 18+
-- PostgreSQL 14+
-- npm or yarn
-
-### Quick Start
-
-```bash
-# Clone the repository
-git clone https://github.com/MissNapalm/nestjsauth.git
+1. Clone & Install
+bashgit clone https://github.com/MissNapalm/nestjsauth.git
 cd nestjsauth
-
-# Install dependencies
 npm install
+2. Configure Environment Variables
+bashcp .env.example .env
+Then open .env and fill in:
+envDATABASE_URL="postgresql://your_user:your_password@localhost:5432/nestauth"
+JWT_SECRET="your-strong-random-secret"
 
-# Configure environment variables
-cp .env.example .env
-# Edit .env with your credentials (see Configuration below)
-
-# Run database migrations
-npx prisma migrate dev
-
-# Start development server
+# Optional — required for email verification & password reset
+EMAIL_HOST="smtp.gmail.com"
+EMAIL_PORT=587
+EMAIL_USER="your-email@gmail.com"
+EMAIL_PASS="your-app-specific-password"
+3. Set Up PostgreSQL
+Create the database manually before running migrations:
+sqlCREATE DATABASE nestauth;
+4. Run Migrations & Start
+bashnpx prisma migrate dev
 npm run dev
+The API will be available at http://localhost:3000.
 ```
 
 ### Configuration
