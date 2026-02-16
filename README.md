@@ -179,10 +179,9 @@ This project underwent systematic security testing covering common vulnerability
 
 Audit logs are available via the `/audit/logs` endpoint.
 
-> **Note:** For development ease, this endpoint is currently open and does not require authentication. Remove this in production for security.
+---
 
-You can filter logs by `eventType`, `email`, `riskLevel`, and `limit` (default: 50).
- Installation & Setup
+## Installation and Setup
 
 ⚠️ This project requires full manual setup. There is no hosted demo — you'll need to configure your own database, JWT secret, and (optionally) email credentials locally.
 
@@ -199,10 +198,8 @@ npm install
 2. Configure Environment Variables
 bashcp .env.example .env
 Then open .env and fill in:
-envDATABASE_URL="postgresql://your_user:your_password@localhost:5432/nestauth"
+DATABASE_URL="postgresql://your_user:your_password@localhost:5432/nestauth"
 JWT_SECRET="your-strong-random-secret"
-
-# Optional — required for email verification & password reset
 EMAIL_HOST="smtp.gmail.com"
 EMAIL_PORT=587
 EMAIL_USER="your-email@gmail.com"
