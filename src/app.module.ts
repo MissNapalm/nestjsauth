@@ -12,6 +12,7 @@ import { AuditService } from './audit/audit.service';
 import { AuditController } from './audit/audit.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { CustomThrottlerGuard } from './guards/custom-throttler.guard';
+import { RolesGuard } from './guards/roles.guard';
 import { RequestIdMiddleware } from './middleware/request-id.middleware';
 
 @Module({
@@ -44,10 +45,11 @@ import { RequestIdMiddleware } from './middleware/request-id.middleware';
   ],
   controllers: [AppController, AuthController, AuditController],
   providers: [
-    AuthService, 
-    JwtStrategy, 
-    EmailService, 
+    AuthService,
+    JwtStrategy,
+    EmailService,
     AuditService,
+    RolesGuard,
     // Apply custom throttler guard globally
     {
       provide: APP_GUARD,

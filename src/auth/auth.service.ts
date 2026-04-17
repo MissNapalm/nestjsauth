@@ -1,19 +1,33 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, BadRequestException, UnauthorizedException, OnModuleInit } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcryptjs';
+import * as argon2 from 'argon2';
 import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { AuditService, AuditEventType } from '../audit/audit.service';
 
+// OWASP recommended argon2id parameters (2024)
+const ARGON2_OPTIONS: argon2.Options = {
+  type: argon2.argon2id,
+  memoryCost: 19456, // 19 MiB
+  timeCost: 2,
+  parallelism: 1,
+};
+
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
+  private dummyHash: string;
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
     private emailService: EmailService,
     private auditService: AuditService,
   ) {}
+
+  async onModuleInit() {
+    this.dummyHash = await argon2.hash('dummy_placeholder', ARGON2_OPTIONS);
+  }
 
   // Cryptographically secure token generation
   private generateSecureToken(): string {
@@ -22,12 +36,10 @@ export class AuthService {
 
   // Constant-time comparison to prevent timing attacks
   private secureCompare(a: string, b: string): boolean {
-    if (a.length !== b.length) {
-      // Still do comparison to maintain constant time
-      crypto.timingSafeEqual(Buffer.from(a), Buffer.from(a));
-      return false;
-    }
-    return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+    const aBuf = Buffer.from(a);
+    const bBuf = Buffer.from(b.padEnd(a.length, '\0').slice(0, a.length));
+    const equal = crypto.timingSafeEqual(aBuf, bBuf);
+    return equal && a.length === b.length;
   }
 
   // Artificial delay to prevent user enumeration via timing
@@ -52,7 +64,7 @@ export class AuthService {
       throw new BadRequestException('User already exists');
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await argon2.hash(password, ARGON2_OPTIONS);
 
     // Create user in database
     const user = await this.prisma.user.create({
@@ -252,9 +264,7 @@ export class AuthService {
     });
 
     if (!user) {
-      // Perform dummy bcrypt compare with VALID hash to maintain consistent timing
-      // This prevents timing-based user enumeration attacks
-      await bcrypt.compare(password, '$2a$10$BDuXtBZdHxgOSc54rLPQEufQWquQT7fSpFIru3Zh4FmW7hXXnQCZC');
+      await argon2.verify(this.dummyHash, password);
       
       this.auditService.log(AuditEventType.LOGIN_FAILED, {
         email,
@@ -289,7 +299,7 @@ export class AuthService {
       });
     }
 
-    const passwordMatch = await bcrypt.compare(password, user.password);
+    const passwordMatch = await argon2.verify(user.password, password);
     if (!passwordMatch) {
       // Increment failed attempts
       const newFailedAttempts = user.failedLoginAttempts + 1;
@@ -468,6 +478,7 @@ export class AuthService {
       {
         sub: user.id,
         email: user.email,
+        role: user.role,
         type: 'access',
       },
       { expiresIn: '15m' },
@@ -478,6 +489,7 @@ export class AuthService {
       {
         sub: user.id,
         email: user.email,
+        role: user.role,
         type: 'refresh',
       },
       { expiresIn: '7d' },
@@ -544,6 +556,7 @@ export class AuthService {
       {
         sub: user.id,
         email: user.email,
+        role: user.role,
         type: 'access',
       },
       { expiresIn: '15m' },
@@ -640,7 +653,7 @@ export class AuthService {
       throw new BadRequestException('Reset token has expired. Please request a new one.');
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await argon2.hash(newPassword, ARGON2_OPTIONS);
 
     // Update password
     const user = await this.prisma.user.update({

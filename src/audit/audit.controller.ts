@@ -1,13 +1,16 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuditService, AuditEventType } from './audit.service';
+import { RolesGuard } from '../guards/roles.guard';
+import { Roles } from '../decorators/roles.decorator';
 
 @Controller('audit')
 export class AuditController {
   constructor(private auditService: AuditService) {}
 
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('ADMIN')
   @Get('logs')
-  // WARNING: This endpoint is open for development only. Remove before production!
   getLogs(
     @Query('eventType') eventType?: AuditEventType,
     @Query('email') email?: string,
@@ -22,8 +25,8 @@ export class AuditController {
     });
   }
 
-  // Get security summary dashboard
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('ADMIN')
   @Get('summary')
   getSummary() {
     return this.auditService.getSecuritySummary();

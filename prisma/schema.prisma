@@ -15,17 +15,18 @@ model User {
   email           String    @unique
   password        String
   emailVerified   Boolean   @default(false)
+  role            Role      @default(USER)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  
+
   // Account lockout fields
   failedLoginAttempts Int       @default(0)
   lockedUntil         DateTime?
-  
+
   // Relations
   refreshTokens   RefreshToken[]
   auditLogs       AuditLog[]
-  
+
   @@map("users")
 }
 
@@ -84,4 +85,9 @@ model AuditLog {
 enum TokenType {
   EMAIL_VERIFICATION
   PASSWORD_RESET
+}
+
+enum Role {
+  USER
+  ADMIN
 }
