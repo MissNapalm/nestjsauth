@@ -12,6 +12,7 @@ NestAuth is a comprehensive authentication system built to showcase professional
 **Key Highlights:**
 - ✅ 40+ security controls implementing OWASP best practices
 - ✅ Complete authentication flow with JWT, 2FA, and email verification
+- ✅ Role-based access control (ADMIN / USER) with JWT-embedded roles
 - ✅ Real-world penetration testing with documented remediation
 - ✅ Production-ready architecture with comprehensive audit logging
 - ✅ Modular, maintainable code following enterprise patterns
@@ -21,6 +22,7 @@ NestAuth is a comprehensive authentication system built to showcase professional
 ## 🎯 Purpose
 
 This project was developed as a portfolio piece to demonstrate:
+
 - Practical application of secure coding practices
 - Ability to identify and remediate security vulnerabilities
 - Professional-grade code organization and documentation
@@ -37,6 +39,7 @@ This project was developed as a portfolio piece to demonstrate:
 | **Framework** | NestJS 10 | Modular TypeScript framework |
 | **Database** | PostgreSQL + Prisma ORM | Type-safe database operations |
 | **Authentication** | Passport.js + JWT | Industry-standard auth middleware |
+| **Authorization** | Custom RolesGuard + Decorator | Role-based access control |
 | **Security** | Helmet + Custom Guards | Multi-layered protection |
 | **Email** | Nodemailer | Transactional email delivery |
 | **Hashing** | bcryptjs | Secure password storage |
@@ -47,9 +50,10 @@ This project was developed as a portfolio piece to demonstrate:
 nestauth/
 ├── src/
 │   ├── auth/           # Authentication logic & strategies
-│   ├── audit/          # Security audit logging
+│   ├── audit/          # Security audit logging (ADMIN only)
+│   ├── decorators/     # @Roles decorator
 │   ├── email/          # Email verification & notifications
-│   ├── guards/         # Custom security guards
+│   ├── guards/         # RolesGuard, custom throttler
 │   ├── middleware/     # Request processing & tracing
 │   ├── prisma/         # Database integration
 │   └── utils/          # Shared utilities
@@ -74,7 +78,7 @@ This project implements a comprehensive set of security controls, organized as f
 - Mandatory email verification before account activation
 - Secure password reset flow with expiring, cryptographically secure tokens
 - Password complexity enforcement (6+ chars, relaxed for testing)
-- Role-based access control for sensitive endpoints (e.g., audit logs)
+- Role-based access control — `USER` and `ADMIN` roles stored in the database and embedded in JWT payloads; sensitive endpoints enforced by `RolesGuard` + `@Roles()` decorator
 
 #### Cryptographic Security
 - bcrypt password hashing (10 rounds)
@@ -111,7 +115,7 @@ This project implements a comprehensive set of security controls, organized as f
 - Request ID middleware for distributed tracing
 - Comprehensive audit logging for all authentication events
 - Security event alerting (e.g., high-risk actions)
-- Full audit trail available via `/audit/logs` endpoint (open for development only)
+- Audit endpoints restricted to `ADMIN` role
 
 #### Secure Development Practices
 - Modular guards and middleware for extensibility
@@ -135,15 +139,14 @@ This project underwent systematic security testing covering common vulnerability
 | User Enumeration (Timing) | ✅ Fixed | Constant-time comparisons and dummy operations |
 | User Enumeration (Error Messages) | ✅ Fixed | Generic responses for all auth failures |
 | Account Lockout Bypass | ✅ Fixed | Server-side lockout tracking per user |
-| JWT Algorithm Confusion | ✅ Fixed | Enforced RS256/HS256 with strict validation |
+| JWT Algorithm Confusion | ✅ Fixed | Enforced HS256 with strict validation |
 | Password Reset Token Attacks | ✅ Fixed | Cryptographically secure tokens with expiration |
 | Missing Security Headers | ✅ Fixed | Implemented Helmet with OWASP recommendations |
 | CORS Misconfiguration | ✅ Fixed | Restricted to specific allowed origins |
+| Broken Access Control (Audit Logs) | ✅ Fixed | ADMIN-only RolesGuard on all audit endpoints |
 | Weak Password Policy | ⚠️ Partial | 6-char minimum enforced (complexity pending) |
 
 > **Note:** Password complexity requirements are intentionally relaxed (6-character minimum) for testing and demo purposes. Enforce a stronger policy before production.
-
-**Documentation**: Full audit trail available via `/audit/logs` endpoint
 
 ---
 
@@ -159,7 +162,6 @@ This project underwent systematic security testing covering common vulnerability
 | `POST` | `/auth/request-password-reset` | Request password reset email |
 | `POST` | `/auth/reset-password` | Reset password with token |
 | `GET` | `/auth/verify-email` | Verify email address |
-| `GET` | `/audit/logs` | Access audit logs <br> <sub>Open for development only. Remove public access before production.</sub> |
 
 ### Protected Endpoints (Requires JWT)
 
@@ -169,15 +171,31 @@ This project underwent systematic security testing covering common vulnerability
 | `POST` | `/auth/setup-2fa` | Enable two-factor authentication |
 | `POST` | `/auth/verify-2fa` | Verify 2FA code |
 | `GET` | `/auth/profile` | Retrieve user profile |
-| `GET` | `/audit/summary` | View security dashboard |
+
+### Admin Endpoints (Requires JWT + ADMIN role)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/audit/logs` | Query audit logs (filter by `eventType`, `email`, `riskLevel`, `limit`) |
+| `GET` | `/audit/summary` | View security event dashboard |
+
+---
+
+## 👤 Roles
+
+Users are assigned either the `USER` or `ADMIN` role at registration (default: `USER`). The role is stored in the database and embedded in the JWT payload. The `RolesGuard` reads the role from the token and enforces access on protected routes via the `@Roles()` decorator.
+
+To promote a user to admin, update their record directly in the database:
+
+```sql
+UPDATE users SET role = 'ADMIN' WHERE email = 'your@email.com';
+```
 
 ---
 
 ## 📑 Audit Logs
 
-Audit logs are available via the `/audit/logs` endpoint. You can filter by `eventType`, `email`, `riskLevel`, and `limit` (default: 50).
-
-> **Note:** This endpoint is open for development ease. Remove public access before production.
+Audit logs are available via the `/audit/logs` endpoint and require an `ADMIN` JWT. You can filter by `eventType`, `email`, `riskLevel`, and `limit` (default: 50).
 
 ---
 
@@ -234,19 +252,20 @@ API will be live at `http://localhost:3000`. That's it!
    └─> User submits email/password
        └─> Email verification sent
            └─> User clicks verification link
-               └─> Account activated
+               └─> Account activated (role: USER)
 
 2. Login
    └─> User submits credentials
        └─> Server validates & checks lockout
            └─> 2FA code sent (if enabled)
                └─> User enters 2FA code
-                   └─> JWT tokens issued
+                   └─> JWT issued with role embedded
 
 3. Authenticated Requests
-   └─> Client sends access token in Authorization header
-       └─> Server validates JWT
-           └─> Protected resource accessed
+   └─> Client sends JWT in Authorization header
+       └─> JwtStrategy validates token & extracts role
+           └─> RolesGuard enforces role requirements
+               └─> Protected resource accessed
 
 4. Token Refresh
    └─> Access token expires
@@ -262,7 +281,7 @@ API will be live at `http://localhost:3000`. That's it!
 ## 📊 Key Metrics
 
 - **Security Controls**: 40+ implemented features
-- **Test Coverage**: Pentested against 10 common attack vectors
+- **Test Coverage**: Pentested against 11 common attack vectors
 - **Lines of Code**: ~2,500 (TypeScript)
 - **Database Migrations**: Version-controlled schema evolution
 - **Audit Events**: Complete authentication lifecycle tracking
@@ -276,6 +295,7 @@ This project demonstrates proficiency in:
 - Secure software development lifecycle (SSDLC)
 - OWASP Top 10 vulnerability prevention
 - Authentication and authorization patterns
+- Role-based access control design
 - Cryptographic best practices
 - Defensive programming techniques
 - Security testing and remediation
