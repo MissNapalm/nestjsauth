@@ -146,8 +146,6 @@ This project underwent systematic security testing covering common vulnerability
 | Broken Access Control (Audit Logs) | ✅ Fixed | ADMIN-only RolesGuard on all audit endpoints |
 | Weak Password Policy | ⚠️ Partial | 6-char minimum enforced (complexity pending) |
 
-> **Note:** Password complexity requirements are intentionally relaxed (6-character minimum) for testing and demo purposes. Enforce a stronger policy before production.
-
 ---
 
 ## 🚀 API Endpoints
