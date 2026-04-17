@@ -144,7 +144,6 @@ This project underwent systematic security testing covering common vulnerability
 | Missing Security Headers | ✅ Fixed | Implemented Helmet with OWASP recommendations |
 | CORS Misconfiguration | ✅ Fixed | Restricted to specific allowed origins |
 | Broken Access Control (Audit Logs) | ✅ Fixed | ADMIN-only RolesGuard on all audit endpoints |
-| Weak Password Policy | ⚠️ Partial | 6-char minimum enforced (complexity pending) |
 
 ---
 
