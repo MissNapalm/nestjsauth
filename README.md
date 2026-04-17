@@ -42,7 +42,7 @@ This project was developed as a portfolio piece to demonstrate:
 | **Authorization** | Custom RolesGuard + Decorator | Role-based access control |
 | **Security** | Helmet + Custom Guards | Multi-layered protection |
 | **Email** | Nodemailer | Transactional email delivery |
-| **Hashing** | bcryptjs | Secure password storage |
+| **Hashing** | argon2id | Secure password storage (OWASP recommended) |
 
 ### Project Structure
 
@@ -81,7 +81,7 @@ This project implements a comprehensive set of security controls, organized as f
 - Role-based access control — `USER` and `ADMIN` roles stored in the database and embedded in JWT payloads; sensitive endpoints enforced by `RolesGuard` + `@Roles()` decorator
 
 #### Cryptographic Security
-- bcrypt password hashing (10 rounds)
+- Argon2id password hashing (OWASP 2024 parameters: 19 MiB memory, 2 iterations — memory-hard, GPU/ASIC resistant)
 - Cryptographically secure random tokens for password reset
 - JWT secrets loaded from environment variables (no hardcoded secrets)
 - No plaintext password storage
